@@ -82,7 +82,13 @@ export function runCheck(argv: string[]): number {
     return scanSource(file, src, minSeverity);
   };
   if (isFile) {
-    const findings = processFileContent(abs, fs.readFileSync(abs, 'utf8'));
+    let findings: Finding[];
+    try {
+      findings = processFileContent(abs, fs.readFileSync(abs, 'utf8'));
+    } catch (e) {
+      console.error(`错误: 无法处理 ${abs}: ${(e as Error).message}`);
+      return 2;
+    }
     report = {
       findings,
       filesScanned: 1,
