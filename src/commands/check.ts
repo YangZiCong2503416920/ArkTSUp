@@ -13,7 +13,7 @@
 
 import * as path from 'node:path';
 import * as fs from 'node:fs';
-import { scanSource, fixAnyInSource, ScanReport, Severity, Finding } from '../lib/arkts-check';
+import { scanSource, fixAnyInSource, DEFAULT_SKIP, ScanReport, Severity, Finding } from '../lib/arkts-check';
 
 const SEV_COLOR: Record<string, string> = {
   error: '\x1b[31m',   // red
@@ -92,7 +92,8 @@ export function runCheck(argv: string[]): number {
     };
   } else {
     const { collectEtsFiles } = require('../lib/arkts-check') as typeof import('../lib/arkts-check');
-    const files = collectEtsFiles(abs, extraSkip.length ? new Set(extraSkip) : undefined);
+    const skip = extraSkip.length ? new Set([...DEFAULT_SKIP, ...extraSkip]) : undefined;
+    const files = collectEtsFiles(abs, skip);
     const findings: Finding[] = [];
     for (const f of files) {
       try {

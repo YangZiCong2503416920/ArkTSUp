@@ -39,7 +39,7 @@ export interface CheckOptions {
   minSeverity?: Severity;
 }
 
-const DEFAULT_SKIP = new Set(['node_modules', 'oh_modules', '.hvigor', '.git', 'build', '.idea', 'dist', '.cxx', 'ohTest']);
+export const DEFAULT_SKIP = new Set(['node_modules', 'oh_modules', '.hvigor', '.git', 'build', '.idea', 'dist', '.cxx', 'ohTest']);
 
 /** 收集一个目录下所有 .ets 文件（跳过构建产物目录） */
 export function collectEtsFiles(root: string, skipDirs?: Set<string>): string[] {

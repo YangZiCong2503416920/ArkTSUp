@@ -116,7 +116,7 @@ export function jsonToArkTs(input: unknown, options: Json2TsOptions = {}): Json2
    *  - 样本含 null/undefined -> nullable
    *  - 对象 -> 合并所有样本的键（缺失键标可选），注册一个具名类型
    *  - 数组 -> 拍平元素递归推断，元素可空时生成 (T | null)[]
-   *  - 混合类型 -> unknown + 警告
+   *  - 混合类型 -> 生成联合类型（ArkTS 支持任意联合）
    */
   function resolveSamples(samples: unknown[], hint: string, depth: number): Resolved {
     const nonNull: unknown[] = [];
@@ -171,8 +171,8 @@ export function jsonToArkTs(input: unknown, options: Json2TsOptions = {}): Json2
       if (nonNull.every((v) => registered.has(v as object))) {
         const names = new Set(nonNull.map((v) => registered.get(v as object)!));
         if (names.size === 1) return { type: [...names][0], nullable };
-        warnings.push(`警告: 字段 ${hint} 引用了多个已定义类型 (${[...names].join(', ')})，已回退为 unknown`);
-        return { type: 'unknown', nullable };
+        warnings.push(`警告: 字段 ${hint} 引用了多个已定义类型 (${[...names].join(', ')})，已回退为 Object`);
+        return { type: 'Object', nullable };
       }
       if (depth > maxDepth) {
         warnings.push(`警告: ${hint} 嵌套深度超过 ${maxDepth}，已用 Record<string, Object> 截断`);
@@ -223,7 +223,8 @@ export function jsonToArkTs(input: unknown, options: Json2TsOptions = {}): Json2
       for (const key of keys) {
         const { samples, optional } = fields.get(key)!;
         const resolved = resolveSamples(samples, pascal(key), depth + 1);
-        const isOpt = allOptional || optional || resolved.nullable;
+        // ? 仅表示字段缺失；null 值用 T | null 表达；纯 null 字段用 ?: null 表达
+        const isOpt = allOptional || optional || resolved.type === 'null';
         const q = isOpt ? '?' : '';
         // ArkTS 不支持非标识符属性名（arkts-identifiers-as-prop-names），非法键名转换为合法标识符
         let safeKey = key;

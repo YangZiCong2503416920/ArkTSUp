@@ -52,7 +52,7 @@ arktsup json2ts data.json --style class --sort --optional
 - **null 处理**：字段值为 null 时生成 T | null（ArkTS 允许）；纯 null 字段标记 ?:
 - **类型冲突回退**：混合类型字段回退 unknown 并打印警告，绝不生成 ArkTS 不允许的任意联合
 - **递归/共享引用**：自引用结构安全生成递归类型，不会爆栈
-- **非法键名加引号**：如 'user-name': string
+- **非法键名净化**：如 'user-name' 自动转为 user_name 并给出警告（ArkTS 不支持非标识符属性名）
 
 ## check — ArkTS 兼容性检查
 
