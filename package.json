@@ -1,7 +1,7 @@
 {
   "name": "arktsup",
   "version": "0.1.0",
-  "description": "ArkTSUp — 给 ArkTS 提效的命令行小工具集：JSON→ArkTS 类型生成、ArkTS 严格语法检查等",
+  "description": "给 ArkTS 提效的命令行小工具集 / CLI toolkit for HarmonyOS ArkTS developers: JSON→ArkTS type generation & strict-syntax checker",
   "license": "MIT",
   "bin": {
     "arktsup": "dist/src/cli.js"

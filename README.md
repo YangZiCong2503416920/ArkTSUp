@@ -1,5 +1,9 @@
 # ArkTSUp — 给 ArkTS 提效的命令行小工具集
 
+> A CLI toolkit for HarmonyOS ArkTS developers: JSON → ArkTS type generation, and strict-syntax checking against official ArkTS rules.
+
+[![CI](https://github.com/OWNER/ArkTSUp/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/ArkTSUp/actions) <!-- 创建仓库后把 OWNER 换成你的 GitHub 用户名 -->
+
 面向鸿蒙（HarmonyOS）ArkTS 开发者的痛点解决方案集合。全部工具为本地 CLI，不依赖 DevEco Studio，可直接对工程文件做转换、扫描、修复。生成/修复的结果严格贴合 ArkTS 语法限制（无 any、无任意联合、对象字面量必须显式声明类型等）。
 
 > 质量保障：质检过程与证据见 [docs/QUALITY-REPORT.md](docs/QUALITY-REPORT.md)，规则溯源见 [docs/RULES.md](docs/RULES.md)。
