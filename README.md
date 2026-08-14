@@ -113,6 +113,93 @@ arktsup check src/main/ets --fix
 
 **有意不做检查**（都有官方证据，详见 RULES.md）：Function 类型、元组类型、任意联合类型（如 string \| number）、字符串键属性名。
 
+## template — 样板代码生成器
+
+```bash
+# 生成 @Entry 页面
+arktsup template page LoginPage --dir entry/src/main/ets/pages
+
+# 生成可复用组件（@Prop/@State）
+arktsup template component UserCard
+
+# 生成数据模型（interface / class）
+arktsup template model User --fields "id:number,name:string,isVip:boolean"
+arktsup template model User --fields "id:number" --style class
+
+# 生成 @Observed 状态类（字段自动带初值，满足 strictPropertyInitialization）
+arktsup template state CartState --fields "items:number,totalPrice:number"
+
+# 扫描页面目录生成路由常量表（自动识别 @Entry struct）
+arktsup template route-list --dir entry/src/main/ets/pages
+```
+
+生成的代码遵守 ArkTS 限制（无 any、无未类型对象字面量、字段有初值），并可通过 `arktsup check` 自检。
+路由常量表示例：
+
+```typescript
+export class RouteConstants {
+  static readonly LoginPage = '/LoginPage';
+  static readonly HomePage = '/HomePage';
+}
+```
+
+## resource — 资源文件管理
+
+```bash
+# 检查：代码引用缺失的资源（error）+ 定义了但没人用的资源（warning）
+arktsup resource check src/main/resources
+
+# 生成资源路径常量表 R.ets（Record<string,string> 显式标注，符合 ArkTS）
+arktsup resource gen src/main --out ets/common/R.ets
+
+# 添加资源条目（自动写入 resources/base/element/<type>.json）
+arktsup resource add app.string.welcome --value "欢迎"
+arktsup resource add app.color.primary --value "#FF007DFF"
+```
+
+R.ets 用法：代码里用 `R.strings.welcome` 替代魔法字符串 `$r('app.string.welcome')`，资源改名后重新生成即可。
+
+检查示例：
+
+```
+error   Index.ets:5:24 [missingResource] 引用了不存在的资源 app.string.nope
+        建议: 在 resources/**/element/string.json（或 media/）中定义 nope，或修正引用
+warning string.json:1:1 [unusedResource] 资源 app.string.old 未被任何代码引用
+        建议: 确认无用后从资源文件中删除
+```
+
+## migrate — 废弃 API 迁移助手
+
+```bash
+# 先看报告（dry-run 不修改文件）
+arktsup migrate src/main/ets --dry-run
+
+# 自动修复：改写 import 为 @kit.*，并同步替换代码中的调用
+arktsup migrate src/main/ets
+
+# 处理单个文件 / JSON 输出
+arktsup migrate src/entry/Index.ets --format json
+```
+
+自动修复示例（fs -> fileIo、prompt -> promptAction）：
+
+```typescript
+// 修复前
+import { fs } from '@ohos.file.fs';
+import prompt from '@ohos.prompt';
+const t = fs.readTextSync('/tmp/a');
+prompt.showToast({ message: 'hi' });
+
+// 修复后
+import { fileIo } from '@kit.CoreFileKit';
+import { promptAction } from '@kit.ArkUI';
+const t = fileIo.readTextSync('/tmp/a');
+promptAction.showToast({ message: 'hi' });
+```
+
+对照表覆盖约 60 个高频模块（hilog / http / preferences / UIAbility / cryptoFramework / taskpool / webview / wifiManager 等），
+每条都标注了 OpenHarmony 官方 API 文档出处（见 src/lib/deprecations.ts 的 doc 字段），可据此复核或自行扩展。
+
 ## 作为库使用
 
 ```ts
