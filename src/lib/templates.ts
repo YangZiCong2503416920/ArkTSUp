@@ -1,0 +1,205 @@
+/**
+ * templates — 样板代码生成器。
+ *
+ * 生成 ArkTS 合规的页面/组件/数据模型/状态类/路由常量表。
+ * 所有模板遵守 ArkTS 限制：无 any、无对象字面量无类型、类字段有初值（strictPropertyInitialization）。
+ */
+
+export type TemplateType = 'page' | 'component' | 'model' | 'state' | 'route-list';
+
+export interface FieldSpec {
+  name: string;
+  type: string;
+}
+
+export interface TemplateOptions {
+  /** 类型名（PascalCase） */
+  name?: string;
+  /** 字段列表（model/state 用）：'id:number' 或 'id:number,name:string' */
+  fields?: FieldSpec[];
+  /** 输出目录，默认当前目录 */
+  dir?: string;
+  /** 输出文件名，默认 <Name>.ets / RouteConstants.ets */
+  out?: string;
+  /** model 风格：interface | class */
+  style?: 'interface' | 'class';
+}
+
+export interface TemplateResult {
+  fileName: string;
+  code: string;
+}
+
+function pascal(name: string): string {
+  const cleaned = name.replace(/[^A-Za-z0-9_$]/g, ' ').trim();
+  if (!cleaned) return 'Component';
+  return cleaned.split(/\s+/).map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join('');
+}
+
+/** 解析 'id:number,name:string' 形式的字段串 */
+export function parseFields(input: string | undefined): FieldSpec[] {
+  if (!input) return [];
+  return input.split(',').map((f) => f.trim()).filter(Boolean).map((f) => {
+    const idx = f.indexOf(':');
+    if (idx < 0) return { name: f, type: 'string' };
+    return { name: f.slice(0, idx).trim(), type: f.slice(idx + 1).trim() };
+  });
+}
+
+/** 字段类型对应的 ArkTS 默认值 */
+function defaultValue(type: string): string {
+  const t = type.replace(/\s*\|\s*null$/, '').replace(/\[\]$/, '');
+  switch (t) {
+    case 'number': case 'int': case 'double': return '0';
+    case 'boolean': return 'false';
+    case 'string': case 'String': return "''";
+    default: return 'new ' + t + '()';
+  }
+}
+
+export function renderTemplate(type: TemplateType, opts: TemplateOptions): TemplateResult {
+  const name = pascal(opts.name ?? 'Sample');
+  const fields = opts.fields ?? [];
+
+  switch (type) {
+    case 'page':
+      return {
+        fileName: name + '.ets',
+        code: pageTemplate(name),
+      };
+    case 'component':
+      return {
+        fileName: name + '.ets',
+        code: componentTemplate(name),
+      };
+    case 'model':
+      return {
+        fileName: name + '.ets',
+        code: modelTemplate(name, fields, opts.style ?? 'interface'),
+      };
+    case 'state':
+      return {
+        fileName: name + '.ets',
+        code: stateTemplate(name, fields),
+      };
+    case 'route-list': {
+      throw new Error('route-list 需要扫描目录，请使用 renderRouteList()');
+    }
+  }
+}
+
+function pageTemplate(name: string): string {
+  return [
+    "import { router } from '@kit.ArkUI';",
+    '',
+    '@Entry',
+    '@Component',
+    'struct ' + name + ' {',
+    "  @State message: string = 'Hello " + name + "';",
+    '',
+    '  build() {',
+    '    Column({ space: 12 }) {',
+    '      Text(this.message)',
+    '        .fontSize(24)',
+    '        .fontWeight(FontWeight.Bold)',
+    '        .textAlign(TextAlign.Center)',
+    '',
+    "      Button('返回')",
+    '        .onClick(() => {',
+    '          router.back();',
+    '        })',
+    '    }',
+    "    .width('100%')",
+    "    .height('100%')",
+    '    .justifyContent(FlexAlign.Center)',
+    '  }',
+    '}',
+    '',
+  ].join('\n');
+}
+
+function componentTemplate(name: string): string {
+  return [
+    '@Component',
+    'export struct ' + name + ' {',
+    "  @Prop title: string = '';",
+    '  @State count: number = 0;',
+    '',
+    '  build() {',
+    '    Column({ space: 8 }) {',
+    '      Text(this.title)',
+    '        .fontSize(20)',
+    '        .fontWeight(FontWeight.Medium)',
+    '',
+    '      Button(this.count.toString())',
+    '        .onClick(() => {',
+    '          this.count++;',
+    '        })',
+    '    }',
+    '    .padding(16)',
+    '  }',
+    '}',
+    '',
+  ].join('\n');
+}
+
+function modelTemplate(name: string, fields: FieldSpec[], style: 'interface' | 'class'): string {
+  if (fields.length === 0) {
+    throw new Error('model 模板需要 --fields "a:number,b:string"，如：arktsup template model User --fields "id:number,name:string"');
+  }
+  if (style === 'class') {
+    const lines = ['export class ' + name + ' {'];
+    for (const f of fields) {
+      lines.push('  ' + f.name + ': ' + f.type + ' = ' + defaultValue(f.type) + ';');
+    }
+    lines.push('}', '');
+    return lines.join('\n');
+  }
+  const lines = ['export interface ' + name + ' {'];
+  for (const f of fields) {
+    lines.push('  ' + f.name + ': ' + f.type);
+  }
+  lines.push('}', '');
+  return lines.join('\n');
+}
+
+function stateTemplate(name: string, fields: FieldSpec[]): string {
+  if (fields.length === 0) {
+    throw new Error('state 模板需要 --fields，如：arktsup template state AppState --fields "count:number,userName:string"');
+  }
+  const lines = [
+    '@Observed',
+    'export class ' + name + ' {',
+  ];
+  for (const f of fields) {
+    lines.push('  ' + f.name + ': ' + f.type + ' = ' + defaultValue(f.type) + ';');
+  }
+  lines.push('}', '');
+  return lines.join('\n');
+}
+
+/** 扫描目录中的 @Entry 页面并生成路由常量表（RouteConstants.ets） */
+export function renderRouteList(pagesDir: string, readFile: (p: string) => string, listFiles: (d: string) => string[]): TemplateResult {
+  const files = listFiles(pagesDir).filter((f) => f.endsWith('.ets'));
+  const entries: { name: string; path: string }[] = [];
+  for (const f of files) {
+    const text = readFile(f);
+    if (!text.includes('@Entry')) continue;
+    const m = /struct\s+([A-Za-z_$][A-Za-z0-9_$]*)/.exec(text);
+    if (!m) continue;
+    const rel = f.replace(/\\/g, '/').replace(/^\.\//, '');
+    entries.push({ name: m[1], path: '/' + rel.replace(/\.ets$/, '') });
+  }
+  entries.sort((a, b) => a.name.localeCompare(b.name));
+  const lines = [
+    '/**',
+    ' * 路由常量表（由 arktsup template route-list 生成，请勿手改；页面增删后重新生成）',
+    ' */',
+    'export class RouteConstants {',
+  ];
+  for (const e of entries) {
+    lines.push("  static readonly " + e.name + " = '" + e.path + "';");
+  }
+  lines.push('}', '');
+  return { fileName: 'RouteConstants.ets', code: lines.join('\n') };
+}

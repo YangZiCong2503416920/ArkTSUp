@@ -93,6 +93,7 @@ test('symbolType: 类型与 Symbol() 调用，Symbol.iterator 不报', () => {
 
 test('staticObjectLiteral / indexSignature（错误级）/ propsByIndex', () => {
   assert.equal(rulesOf('class C { static o = { a: 1 }; }', 'staticObjectLiteral').length, 1);
+  assert.equal(rulesOf('class C { static o: Record<string, string> = { a: "1" }; }', 'staticObjectLiteral').length, 0);
   const idx = rulesOf('interface D { [k: string]: string }', 'indexSignature');
   assert.equal(idx.length, 1);
   assert.equal(idx[0].severity, 'error');

@@ -451,10 +451,11 @@ export function scanSource(file: string, sourceText: string, minSeverity: Severi
     ) {
       add('symbolType', node);
     }
-    // 7. 静态属性对象字面量初始化
+    // 7. 静态属性无类型标注的对象字面量初始化（带类型标注是合法的，如 static x: Record<string,string> = {...}）
     if (
       ts.isPropertyDeclaration(node) &&
       (node.modifiers?.some((m) => m.kind === ts.SyntaxKind.StaticKeyword)) &&
+      !node.type &&
       node.initializer &&
       ts.isObjectLiteralExpression(node.initializer)
     ) {

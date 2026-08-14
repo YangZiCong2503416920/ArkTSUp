@@ -8,6 +8,9 @@
 
 import { runJson2Ts } from './commands/json2ts';
 import { runCheck } from './commands/check';
+import { runTemplate } from './commands/template';
+import { runResource } from './commands/resource';
+import { runMigrate } from './commands/migrate';
 
 const VERSION = '0.1.0';
 
@@ -19,6 +22,9 @@ const HELP = `arktsup v${VERSION} — 给 ArkTS 提效的命令行小工具集
 命令:
   json2ts   把 JSON 转成符合 ArkTS 限制的类型声明（interface/class）
   check     扫描 .ets 源码中的 ArkTS 不兼容写法
+  template  生成页面/组件/数据模型/路由常量表等样板代码
+  resource  HarmonyOS 资源文件管理：缺失引用检查、R.ets 常量生成、条目添加
+  migrate   废弃 API 迁移：@ohos.* -> @kit.* 检测与自动修复
 
 通用:
   -h, --help      显示帮助
@@ -40,6 +46,9 @@ function main(): number {
   switch (cmd) {
     case 'json2ts': return runJson2Ts(rest);
     case 'check': return runCheck(rest);
+    case 'template': return runTemplate(rest);
+    case 'resource': return runResource(rest);
+    case 'migrate': return runMigrate(rest);
     case '-h': case '--help': console.log(HELP); return 0;
     case '-v': case '--version': console.log(VERSION); return 0;
     default:

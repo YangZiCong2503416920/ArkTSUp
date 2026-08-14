@@ -130,11 +130,16 @@ npm run build   # tsc 编译到 dist/
 npm test        # 构建 + 单元测试（node:test）
 ```
 
-## 规划中的工具（Roadmap）
+## Roadmap
 
-- [ ] **模板代码生成器**：页面/组件/@State 状态管理/路由注册等样板代码
-- [ ] **资源文件管理**：string.json 与代码引用同步、未使用资源检测
-- [ ] **API 版本迁移助手**：废弃 API 检测与替换建议
+### ✅ 已完成
+
+- [x] **模板代码生成器**：`arktsup template` — 页面 / 组件 / 数据模型 / @Observed 状态类 / 路由常量表
+- [x] **资源文件管理**：`arktsup resource` — 缺失引用检查、未使用资源检测、R.ets 常量生成、条目添加
+- [x] **API 版本迁移助手**：`arktsup migrate` — @ohos.* → @kit.* 检测与自动修复
+
+### ⏳ 待做
+
 - [ ] **IDE 插件封装**：把 check / json2ts 接到 DevEco Studio / VS Code
 
 ## License
