@@ -34,7 +34,7 @@ export function scanMigrateFile(file: string, text: string): Finding[] {
       severity: 'warning',
       rule: 'deprecatedModule',
       message: `已废弃的模块导入 '${mod}'${dep.note ? '（' + dep.note + '）' : ''}`,
-      fix: `改为 import ... from '${dep.kit}'${names ? '（导入名 ${names}）' : ''}。出处: ${dep.doc}`,
+      fix: `改为 import ... from '${dep.kit}'${names ? '（导入名 ' + names + '）' : ''}。出处: ${dep.doc}`,
       snippet: mod,
     });
   }
@@ -66,7 +66,7 @@ function isNamePosition(node: ts.Identifier): boolean {
   return false;
 }
 
-export function fixMigrateFile(file: string, text: string): { text: string; fixed: number } {
+export function fixMigrateFile(file: string, text: string): { text: string; fixed: number; skipped?: string } {
   const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const repls: Replacement[] = [];
   const handledModules = new Set<string>();
@@ -123,6 +123,21 @@ export function fixMigrateFile(file: string, text: string): { text: string; fixe
   }
 
   if (repls.length === 0) return { text, fixed: 0 };
+
+  // 冲突检测：同一旧名被映射到不同新名（如两个废弃模块都绑定 fs），自动修复会生成错误代码 -> 跳过并提示
+  const nameTargets = new Map<string, Set<string>>();
+  for (const { old, newName } of deprecatedNames) {
+    if (!nameTargets.has(old)) nameTargets.set(old, new Set());
+    nameTargets.get(old)!.add(newName);
+  }
+  const conflicts = [...nameTargets.entries()].filter(([, s]) => s.size > 1);
+  if (conflicts.length > 0) {
+    return {
+      text,
+      fixed: 0,
+      skipped: '导入名冲突: ' + conflicts.map(([o, s]) => o + ' -> ' + [...s].join('/')).join(', ') + '，请手动处理',
+    };
+  }
 
   // 2) 替换代码中旧导入名的引用（跳过 import 声明子树与名称位置）
   const importRanges: [number, number][] = [];

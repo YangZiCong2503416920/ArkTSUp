@@ -56,6 +56,9 @@ export function runMigrate(argv: string[]): number {
         fs.writeFileSync(f, res.text);
         totalFixed += res.fixed;
       }
+      if (res.skipped) {
+        console.error(`跳过 ${f}: ${res.skipped}`);
+      }
       findings.push(...scanMigrateFile(f, fs.readFileSync(f, 'utf8')));
     } else {
       findings.push(...scanMigrateFile(f, text));

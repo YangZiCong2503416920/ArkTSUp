@@ -84,6 +84,21 @@ test('fixMigrateFile: 无废弃导入时不动', () => {
   assert.equal(text, src);
 });
 
+test('fixMigrateFile: 导入名冲突时跳过并提示，不生成坏代码', () => {
+  const src = [
+    "import { fs } from '@ohos.file.fs';",
+    "import fs from '@ohos.prompt';",
+    '',
+    'fs.readTextSync("/x");',
+    'fs.showToast({ message: "x" });',
+  ].join('\n');
+  const { text, fixed, skipped } = fixMigrateFile('t.ets', src);
+  assert.equal(fixed, 0);
+  assert.equal(text, src); // 文件原样保留
+  assert.ok(skipped?.includes('冲突'), '应说明冲突原因');
+  assert.ok(skipped?.includes('fileIo'));
+});
+
 test('fixMigrateFile: 命名空间导入 * as fs', () => {
   const src = [
     "import * as fs from '@ohos.file.fs';",

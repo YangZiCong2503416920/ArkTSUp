@@ -37,7 +37,6 @@
 | intersection | arkts-no-intersection-types | error | 迁移指南 §1816；recipe19 |
 | conditionalType | arkts-no-conditional-types | error | 迁移指南 §1908；recipe22 |
 | objLiteralAsType | arkts-no-obj-literals-as-types | error | 迁移指南 §1688；recipe40 |
-| tupleType | arkts-no-tuples | error | recipe8 See also（Use Object[] instead of tuples） |
 | deleteOp | arkts-no-delete | error | recipe59 |
 | typeQuery | arkts-no-type-query | error | recipe60 |
 | angleCast | arkts-as-casts | error | 迁移指南 §2242 |
