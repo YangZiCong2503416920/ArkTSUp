@@ -129,23 +129,40 @@ export function jsonToArkTs(input: unknown, options: Json2TsOptions = {}): Json2
     const kinds = new Set<string>();
     for (const v of nonNull) kinds.add(Array.isArray(v) ? 'array' : typeof v);
     if (kinds.size > 1) {
-      warnings.push(`警告: 字段 ${hint} 类型混合 (${[...kinds].join(', ')})，已回退为 unknown，请手动调整`);
-      return { type: 'unknown', nullable };
+      // ArkTS 支持任意联合类型：按实际出现的类型生成联合（如 number | string）
+      const parts: string[] = [];
+      const seen = new Set<string>();
+      for (const v of nonNull) {
+        const r = resolveSamples([v], hint, depth + 1);
+        if (!seen.has(r.type) && r.type !== 'null') {
+          seen.add(r.type);
+          parts.push(r.type);
+        }
+      }
+      if (parts.length === 0) return { type: 'Object', nullable };
+      if (parts.length > 4) {
+        warnings.push(`警告: 字段 ${hint} 混合类型过多 (${parts.join(', ')}...)，已回退为 Object`);
+        return { type: 'Object', nullable };
+      }
+      return { type: parts.join(' | '), nullable };
     }
     const kind = [...kinds][0];
 
     if (kind === 'array') {
       if (depth > maxDepth) {
-        warnings.push("警告: " + hint + " 嵌套深度超过 " + maxDepth + "，已用 unknown[] 截断");
-        return { type: 'unknown[]', nullable };
+        warnings.push("警告: " + hint + " 嵌套深度超过 " + maxDepth + "，已用 Object[] 截断");
+        return { type: 'Object[]', nullable };
       }
       const elements: unknown[] = [];
       for (const v of nonNull) elements.push(...(v as unknown[]));
       const inner = resolveSamples(elements, singularize(hint), depth + 1);
-      if (inner.type === 'null') return { type: 'unknown[]', nullable };
-      const itemType = inner.nullable && inner.type !== 'null'
-        ? `(${inner.type} | null)`
-        : inner.type;
+      if (inner.type === 'null') {
+        warnings.push(`警告: 数组 ${hint} 元素为空或全为 null，无法推断元素类型，已生成 Object[]，请替换为具体类型`);
+        return { type: 'Object[]', nullable };
+      }
+      let itemType = inner.type;
+      if (inner.nullable && inner.type !== 'null') itemType = `(${inner.type} | null)`;
+      else if (itemType.includes(' | ')) itemType = `(${itemType})`;
       return { type: `${itemType}[]`, nullable };
     }
 
@@ -158,8 +175,8 @@ export function jsonToArkTs(input: unknown, options: Json2TsOptions = {}): Json2
         return { type: 'unknown', nullable };
       }
       if (depth > maxDepth) {
-        warnings.push(`警告: ${hint} 嵌套深度超过 ${maxDepth}，已用 Record<string, unknown> 截断`);
-        return { type: 'Record<string, unknown>', nullable };
+        warnings.push(`警告: ${hint} 嵌套深度超过 ${maxDepth}，已用 Record<string, Object> 截断`);
+        return { type: 'Record<string, Object>', nullable };
       }
       const fields = new Map<string, { samples: unknown[]; optional: boolean }>();
       const total = nonNull.length;
@@ -192,8 +209,8 @@ export function jsonToArkTs(input: unknown, options: Json2TsOptions = {}): Json2
     if (kind === 'string' || kind === 'number' || kind === 'boolean' || kind === 'bigint') {
       return { type: kind, nullable };
     }
-    warnings.push(`警告: 字段 ${hint} 存在无法映射的类型 ${kind}，已回退为 unknown`);
-    return { type: 'unknown', nullable };
+    warnings.push(`警告: 字段 ${hint} 存在无法映射的类型 ${kind}，已回退为 Object`);
+    return { type: 'Object', nullable };
   }
 
   function emitBlocks(): string {
@@ -208,7 +225,13 @@ export function jsonToArkTs(input: unknown, options: Json2TsOptions = {}): Json2
         const resolved = resolveSamples(samples, pascal(key), depth + 1);
         const isOpt = allOptional || optional || resolved.nullable;
         const q = isOpt ? '?' : '';
-        const safeKey = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key) ? key : `'${key.replace(/'/g, "\\'")}'`;
+        // ArkTS 不支持非标识符属性名（arkts-identifiers-as-prop-names），非法键名转换为合法标识符
+        let safeKey = key;
+        if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key)) {
+          safeKey = key.replace(/[^A-Za-z0-9_$]/g, '_');
+          if (!/^[A-Za-z_$]/.test(safeKey)) safeKey = '_' + safeKey;
+          warnings.push(`警告: 字段名 '${key}' 不是合法标识符，已转换为 '${safeKey}'（注意与后端字段名的对应关系）`);
+        }
         const type = resolved.nullable && resolved.type !== 'null'
           ? `${resolved.type} | null`
           : resolved.type;
@@ -228,7 +251,7 @@ export function jsonToArkTs(input: unknown, options: Json2TsOptions = {}): Json2
   if (Array.isArray(input)) {
     const itemHint = singularizeForce(rootName) === rootName ? rootName + 'Item' : singularizeForce(rootName);
     const inner = resolveSamples(input, itemHint, 0);
-    rootAlias = (inner.type === 'null' ? 'unknown' : inner.type) + '[]';
+    rootAlias = (inner.type === 'null' ? 'Object' : inner.type) + '[]';
   } else if (isPlainObject(input)) {
     const fields = new Map<string, { samples: unknown[]; optional: boolean }>();
     for (const [k, v] of Object.entries(input)) fields.set(k, { samples: [v], optional: false });

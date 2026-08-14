@@ -65,7 +65,7 @@ arktsup check src/entry/Index.ets
 arktsup check src/main/ets --format json
 arktsup check src/main/ets --min-severity error
 
-# 自动修复：把 any 替换为 unknown（ArkTS 迁移第一步）
+# 自动修复：把 any/unknown 替换为 Object（ArkTS 迁移第一步，需再手动收窄为具体类型）
 arktsup check src/main/ets --fix
 ```
 
@@ -73,19 +73,39 @@ arktsup check src/main/ets --fix
 
 ### 已覆盖规则
 
+共 27 条规则，全部对照官方文档逐条核验（来源与证据见 [docs/RULES.md](docs/RULES.md)），
+并在 3327 个官方示例文件上验证过误报率（错误级误报 1/3327，为 NDK 互操作边界案例）。
+
 | 规则 | 级别 | 说明 |
 | --- | --- | --- |
-| noAny | error | 禁止 any（any、any[]、as any、Array<any>），建议改具体类型或 unknown |
-| untypedObjectLiteral | error | 无类型声明的对象字面量，需先定义 interface/class 并标注类型 |
-| objectDestructuring | error | 不支持对象解构 |
-| destructuringAssignment | error | 不支持对象解构赋值 |
-| functionType | error | 不支持 Function 类型，改具体函数签名 |
-| illegalUnion | error | 只允许与 null/undefined 组成联合（string \| number 报错，number \| null 合法） |
-| objectSpread | error | 不支持对象展开，用 Object.assign 或逐字段复制 |
-| symbolType | error | 不支持 symbol，改用字符串枚举 |
-| staticObjectLiteral | error | 静态属性不能用对象字面量初始化 |
-| indexSignature | warning | 接口索引签名支持受限，建议 Record<string, T> |
-| catchWithoutType | warning | catch 参数需显式类型，如 catch (err: BusinessError) |
+| noAny | error | 禁止 any / unknown（arkts-no-any-unknown） |
+| untypedObjectLiteral | error | 无类型对象字面量；Object/object 注解也不能初始化字面量（arkts-no-untyped-obj-literals） |
+| objectDestructuring / arrayDestructuring | error | 不支持解构变量声明（arkts-no-destruct-decls） |
+| destructuringAssignment | error | 不支持解构赋值（arkts-no-destruct-assignment） |
+| objectSpread | error | 不支持对象展开，仅数组可展开（arkts-no-spread） |
+| symbolType | error | 不支持 symbol 类型 / Symbol() API（arkts-no-symbol） |
+| staticObjectLiteral | error | 静态属性不能用无类型对象字面量初始化 |
+| indexSignature | error | 不支持 index signature（arkts-no-indexed-signatures） |
+| propsByIndex | warning | obj['key'] 索引访问（arkts-no-props-by-index；Record/Map/枚举/类型化数组允许，需人工确认） |
+| catchWithType | error | 不支持 catch 类型标注（arkts-no-types-in-catch，与直觉相反） |
+| forIn | error | 不支持 for..in（arkts-no-for-in） |
+| tsSuppress | error | 不允许 @ts-ignore / @ts-nocheck 等注释（arkts-strict-typing-required） |
+| asConst | error | 不支持 as const（arkts-no-as-const） |
+| utilityType | error | 不支持的 utility 类型，仅 Partial/Required/Readonly/Record 可用（arkts-no-utility-types） |
+| intersection | error | 不支持交叉类型 A & B（arkts-no-intersection-types） |
+| conditionalType | error | 不支持条件类型（arkts-no-conditional-types） |
+| objLiteralAsType | error | 不支持内联对象类型 { a: number }（arkts-no-obj-literals-as-types） |
+| deleteOp | error | 不支持 delete（arkts-no-delete） |
+| typeQuery | error | typeof 只能用于表达式（arkts-no-type-query） |
+| angleCast | error | 不支持 <T>expr 断言，仅 as T（arkts-as-casts） |
+| nonInferrableArray | error | 数组字面量元素不可推断 / 空数组无类型（arkts-no-noninferrable-arr-literals） |
+| nonIdentifierProps | error | 不支持数字属性名（arkts-identifiers-as-prop-names；字符串键是官方例外） |
+| inOperator | error | 不支持 in 运算符（arkts-no-in） |
+| varDecl | error | 不支持 var（arkts-no-var） |
+| privateIdentifiers | error | 不支持 # 私有字段（arkts-no-private-identifiers） |
+| stdlibRestricted | error | 受限标准库 API：eval、Object.assign/freeze、hasOwnProperty 等（arkts-limited-stdlib） |
+
+**有意不做检查**（都有官方证据，详见 RULES.md）：Function 类型、元组类型、任意联合类型（如 string \| number）、字符串键属性名。
 
 ## 作为库使用
 

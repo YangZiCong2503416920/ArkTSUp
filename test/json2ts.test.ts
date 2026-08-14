@@ -32,9 +32,10 @@ test('数组映射为 T[]', () => {
   assert.match(r.code, /nums: number\[\]/);
 });
 
-test('空数组 -> unknown[]', () => {
+test('空数组 -> Object[] + 警告', () => {
   const r = jsonToArkTs({ items: [] }, { rootName: 'R' });
-  assert.match(r.code, /items: unknown\[\]/);
+  assert.match(r.code, /items: Object\[\]/);
+  assert.ok(r.warnings.length > 0);
 });
 
 test('对象数组合并键，缺失键变为可选', () => {
@@ -54,11 +55,10 @@ test('null 字段标记可空', () => {
   assert.match(r.code, /b: number/);
 });
 
-test('混合类型回退 unknown 并警告', () => {
-  // 同一字段内混合类型：number 与 string 混在数组元素里
-  const r2 = jsonToArkTs({ arr: [1, 'x'] }, { rootName: 'R2' });
-  assert.match(r2.code, /arr: unknown\[\]/);
-  assert.ok(r2.warnings.length > 0);
+test('混合类型生成联合（ArkTS 支持任意联合）', () => {
+  const r = jsonToArkTs({ arr: [1, 'x'] }, { rootName: 'R' });
+  assert.match(r.code, /arr: \(number \| string\)\[\]/);
+  assert.deepEqual(r.warnings, []);
 });
 
 test('class 风格', () => {
@@ -101,10 +101,11 @@ test('递归结构不爆栈且生成递归引用', () => {
   assert.ok(!r.code.includes('undefined'));
 });
 
-test('非常规键名加引号', () => {
+test('非常规键名转换为合法标识符并警告', () => {
   const r = jsonToArkTs({ 'user-name': 1, '2fa': true }, { rootName: 'R' });
-  assert.match(r.code, /'user-name': number/);
-  assert.match(r.code, /'2fa': boolean/);
+  assert.match(r.code, /user_name: number/);
+  assert.match(r.code, /_2fa: boolean/);
+  assert.ok(r.warnings.some((w) => w.includes('user-name')));
 });
 
 test('根为对象数组', () => {

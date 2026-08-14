@@ -110,7 +110,7 @@ export function runCheck(argv: string[]): number {
     };
   }
   if (totalFixed > 0) {
-    process.stdout.write(`已自动修复 ${totalFixed} 处 any -> unknown\n`);
+    process.stdout.write(`已自动修复 ${totalFixed} 处 any/unknown -> Object（请再手动改为具体类型）\n`);
   }
 
   if (format === 'json') {
@@ -147,16 +147,38 @@ const HELP = `arktsup check — 扫描 .ets 源码中的 ArkTS 不兼容写法
   --fix                 自动修复 noAny（把 any 替换为 unknown）
   -h, --help            显示帮助
 
-已覆盖规则:
-  noAny                 禁止 any 类型
-  untypedObjectLiteral  对象字面量必须显式声明类型
-  objectDestructuring   不支持对象解构
-  destructuringAssignment 不支持对象解构赋值
-  functionType          不支持 Function 类型
-  illegalUnion          只允许与 null/undefined 联合
-  objectSpread          不支持对象展开
-  symbolType            不支持 symbol
-  staticObjectLiteral   静态属性不能用对象字面量初始化
-  indexSignature        接口索引签名受限（警告）
-  catchWithoutType      catch 参数需显式类型（警告）
+已覆盖规则（全部对照官方文档，详见 docs/RULES.md）:
+  noAny                 禁止 any / unknown（arkts-no-any-unknown）
+  untypedObjectLiteral  对象字面量必须显式声明类型（arkts-no-untyped-obj-literals）
+  objectDestructuring / arrayDestructuring
+                        不支持解构变量声明（arkts-no-destruct-decls）
+  destructuringAssignment 不支持解构赋值（arkts-no-destruct-assignment）
+  objectSpread          不支持对象展开（arkts-no-spread）
+  symbolType            不支持 symbol 类型 / Symbol()（arkts-no-symbol）
+  staticObjectLiteral   静态属性不能用无类型对象字面量初始化
+  indexSignature        不支持 index signature（arkts-no-indexed-signatures）
+  propsByIndex          不支持 obj['key'] 索引访问（arkts-no-props-by-index）
+  catchWithType         不支持 catch 类型标注（arkts-no-types-in-catch）
+  forIn                 不支持 for..in（arkts-no-for-in）
+  tsSuppress            不允许 @ts-ignore 等注释（arkts-strict-typing-required）
+  asConst               不支持 as const（arkts-no-as-const）
+  utilityType           不支持的 utility 类型（arkts-no-utility-types）
+  intersection          不支持交叉类型（arkts-no-intersection-types）
+  conditionalType       不支持条件类型（arkts-no-conditional-types）
+  objLiteralAsType      不支持内联对象类型（arkts-no-obj-literals-as-types）
+  tupleType             不支持元组（arkts-no-tuples）
+  deleteOp              不支持 delete（arkts-no-delete）
+  typeQuery             typeof 不能用于类型标注（arkts-no-type-query）
+  angleCast             不支持 <T>expr 断言（arkts-as-casts）
+  nonInferrableArray    数组字面量元素不可推断（arkts-no-noninferrable-arr-literals）
+  nonIdentifierProps    不支持非标识符属性名（arkts-identifiers-as-prop-names）
+  inOperator            不支持 in 运算符（arkts-no-in）
+  varDecl               不支持 var（arkts-no-var）
+  privateIdentifiers    不支持 # 私有字段（arkts-no-private-identifiers）
+  stdlibRestricted      受限标准库 API（arkts-limited-stdlib）
+
+注意（有意不做检查）:
+  Function 类型 / 元组类型   官方示例中存在合法用法（如 hypium 测试模板 done: Function），不做检查
+  任意联合类型（string | number） 官方支持任意联合类型
+  非标识符字符串键（如 'deviceId': x） 官方文档 §226 明确是例外，允许
 `;
