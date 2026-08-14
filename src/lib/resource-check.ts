@@ -13,6 +13,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import * as ts from 'typescript';
 import { Finding } from './arkts-check';
 
 export type ResourceType = 'string' | 'color' | 'float' | 'media';
@@ -88,38 +89,36 @@ export function collectResourceDefs(root: string): ResourceDef[] {
   return defs;
 }
 
-/** 扫描 .ets 代码中的资源引用 */
+/** 扫描 .ets 代码中的资源引用（基于 TS AST，注释/字符串内的 $r(...) 不会被误报） */
 export function collectReferences(root: string): ResourceReference[] {
   const refs: ResourceReference[] = [];
   const files = listFiles(root).filter((f) => f.endsWith('.ets'));
-  const re = /\$r\(\s*['"](app\.(string|color|float|media)\.([A-Za-z0-9_\-.]*))['"]\s*\)/g;
-  const reByName = /getString(?:ByName|Sync)\s*\(\s*['"]([A-Za-z0-9_\-.]*)['"]/g;
   for (const f of files) {
     const text = fs.readFileSync(path.join(root, f), 'utf8');
-    const lines = text.split('\n');
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(text)) !== null) {
-      const type = m[2] as ResourceType;
-      const name = m[3];
-      const pos = posOf(lines, m.index);
-      refs.push({ file: f, line: pos.line, column: pos.column, type, name, snippet: m[1] });
+    const sf = ts.createSourceFile(f, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+    function walk(n: ts.Node): void {
+      if (ts.isCallExpression(n)) {
+        const callee = n.expression;
+        const name = ts.isIdentifier(callee) ? callee.text
+          : ts.isPropertyAccessExpression(callee) ? callee.name.text : '';
+        const arg = n.arguments[0];
+        const argText = arg && (ts.isStringLiteral(arg) || ts.isNoSubstitutionTemplateLiteral(arg)) ? arg.text : '';
+        if (name === '$r' && argText) {
+          const m = /^app\.(string|color|float|media)\.([A-Za-z0-9_\-.]*)$/.exec(argText);
+          if (m) {
+            const pos = sf.getLineAndCharacterOfPosition(n.getStart(sf));
+            refs.push({ file: f, line: pos.line + 1, column: pos.character + 1, type: m[1] as ResourceType, name: m[2], snippet: argText });
+          }
+        } else if ((name === 'getStringByName' || name === 'getStringSync') && argText) {
+          const pos = sf.getLineAndCharacterOfPosition(n.getStart(sf));
+          refs.push({ file: f, line: pos.line + 1, column: pos.character + 1, type: 'string', name: argText, snippet: 'app.string.' + argText });
+        }
+      }
+      ts.forEachChild(n, walk);
     }
-    while ((m = reByName.exec(text)) !== null) {
-      const pos = posOf(lines, m.index);
-      refs.push({ file: f, line: pos.line, column: pos.column, type: 'string', name: m[1], snippet: 'app.string.' + m[1] });
-    }
+    walk(sf);
   }
   return refs;
-}
-
-function posOf(lines: string[], index: number): { line: number; column: number } {
-  let line = 0;
-  let acc = 0;
-  for (let i = 0; i < lines.length; i++) {
-    if (acc + lines[i].length + 1 > index) { line = i; break; }
-    acc += lines[i].length + 1;
-  }
-  return { line: line + 1, column: index - acc + 1 };
 }
 
 export interface ResourceReport {
@@ -222,7 +221,10 @@ export function addResource(root: string, type: ResourceType, name: string, valu
   fs.mkdirSync(dir, { recursive: true });
   let json: Record<string, unknown> = {};
   if (fs.existsSync(file)) {
-    try { json = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { json = {}; }
+    try { json = JSON.parse(fs.readFileSync(file, 'utf8')); }
+    catch (e) {
+      throw new Error(`${file} 不是合法的 JSON（${(e as Error).message}），请先修复再添加`);
+    }
   }
   const arr = (json[type] as { name: string; value: string }[]) ?? [];
   if (arr.some((x) => x.name === name)) {

@@ -96,6 +96,8 @@ export function runTemplate(argv: string[]): number {
     console.error(`错误: ${(e as Error).message}`);
     return 2;
   }
+  const rl = result as { warnings?: string[] };
+  if (rl.warnings) for (const w of rl.warnings) console.error(w);
 
   const outDir = path.resolve(dir);
   if (!fs.existsSync(outDir)) {

@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { checkResources, generateConstants, addResource, collectResourceDefs } from '../src/lib/resource-check';
+import { checkResources, generateConstants, addResource, collectResourceDefs, collectReferences } from '../src/lib/resource-check';
+import { runResource } from '../src/commands/resource';
 
 /** 构造一个最小资源工程 fixture */
 function makeFixture(): string {
@@ -90,3 +91,59 @@ test('collectResourceDefs: 读取 element json 与 media 文件', () => {
   const names = defs.map((d) => d.type + ':' + d.name).sort();
   assert.deepEqual(names, ['color:primary', 'media:logo', 'string:hello', 'string:old_key']);
 });
+
+test('CLI: resource check 传文件路径时干净报错（exit 2），不抛栈', () => {
+  const root = makeFixture();
+  const file = path.join(root, 'entry', 'src', 'main', 'ets', 'Index.ets');
+  const origErr = console.error;
+  const errs: string[] = [];
+  console.error = (m: unknown) => { errs.push(String(m)); };
+  const code = runResource(['check', file]);
+  console.error = origErr;
+  assert.equal(code, 2);
+  assert.ok(errs.some((e) => e.includes('目录')));
+  assert.ok(!errs.some((e) => e.includes('ENOTDIR')), '不应出现未捕获的堆栈');
+});
+
+test('CLI: resource add 非法键名/非法类型报错（exit 2），合法键成功', () => {
+  const root = makeFixture();
+  const origErr = console.error;
+  const origOut = process.stdout.write.bind(process.stdout);
+  let out = '';
+  const errs: string[] = [];
+  process.stdout.write = (m: unknown) => { out += String(m); return true; };
+  console.error = (m: unknown) => { errs.push(String(m)); };
+  const bad = runResource(['add', 'app.string.bad key!', '--value', 'v', '--dir', root]);
+  const badType = runResource(['add', 'app.media.pic', '--value', 'v', '--dir', root]);
+  const ok = runResource(['add', 'app.string.ok_key', '--value', 'v', '--dir', root]);
+  console.error = origErr;
+  process.stdout.write = origOut;
+  assert.equal(bad, 2);
+  assert.equal(badType, 2);
+  assert.equal(ok, 0);
+  assert.ok(errs.some((e) => e.includes('ok_key')), '成功添加的输出走 console.error');
+});
+
+test('collectReferences: 注释/字符串内的 $r() 不产生引用', () => {
+  const root = makeFixture();
+  const etsDir = path.join(root, 'entry', 'src', 'main', 'ets');
+  fs.writeFileSync(path.join(etsDir, 'Index.ets'), [
+    "// TODO: use $r('app.string.never_defined')",
+    "const doc = \"See $r('app.string.also_never') in string\";",
+    "@State m: string = $r('app.string.hello');",
+  ].join('\n'));
+  const refs = collectReferences(root);
+  assert.deepEqual(refs.map((x) => x.name), ['hello']);
+});
+
+test('resource check --min-severity error 时汇总与输出一致', () => {
+  const root = makeFixture();
+  const origOut = process.stdout.write.bind(process.stdout);
+  let out = '';
+  process.stdout.write = (m: unknown) => { out += String(m); return true; };
+  const code = runResource(['check', root, '--min-severity', 'error']);
+  process.stdout.write = origOut;
+  assert.equal(code, 1); // 有 missingResource
+  assert.ok(!out.includes('warning'), 'error 级别下不应输出 warning 行');
+});
+

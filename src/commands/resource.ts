@@ -61,7 +61,11 @@ export function runResource(argv: string[]): number {
     dir = positional[1];
   }
   const root = path.resolve(dir);
-  if (!fs.existsSync(root)) { console.error(`错误: 目录不存在 ${root}`); return 2; }
+  if (!fs.existsSync(root)) { console.error(`错误: 路径不存在 ${root}`); return 2; }
+  if ((sub === 'check' || sub === 'gen') && fs.statSync(root).isFile()) {
+    console.error(`错误: ${sub} 需要一个工程/资源目录，而不是文件 ${root}`);
+    return 2;
+  }
 
   switch (sub) {
     case 'check': {
@@ -69,9 +73,11 @@ export function runResource(argv: string[]): number {
       const findings = report.findings.filter(
         (f) => (minSeverity === 'error' ? f.severity === 'error' : true)
       );
+      const errs = findings.filter((f) => f.severity === 'error').length;
+      const warns = findings.filter((f) => f.severity === 'warning').length;
       if (format === 'json') {
-        process.stdout.write(JSON.stringify(report, null, 2) + '\n');
-        return report.errors > 0 ? 1 : 0;
+        process.stdout.write(JSON.stringify({ ...report, findings, errors: errs, warnings: warns }, null, 2) + '\n');
+        return errs > 0 ? 1 : 0;
       }
       for (const f of findings) {
         const color = SEV_COLOR[f.severity] ?? '';
@@ -84,9 +90,9 @@ export function runResource(argv: string[]): number {
       }
       const used = Object.values(report.resourceKeys).reduce((s, arr) => s + arr.length, 0);
       process.stdout.write(
-        `\n扫描 ${report.filesScanned} 个文件、${used} 个资源键：${report.errors} 错误，${report.warnings} 警告\n`
+        `\n扫描 ${report.filesScanned} 个文件、${used} 个资源键：${errs} 错误，${warns} 警告\n`
       );
-      return report.errors > 0 ? 1 : 0;
+      return errs > 0 ? 1 : 0;
     }
     case 'gen': {
       try {
@@ -112,8 +118,19 @@ export function runResource(argv: string[]): number {
       const m = /^(?:app\.)?(string|color|float)(?:\.([A-Za-z0-9_]+))?$/.exec(key);
       if (m && m[2]) { type = m[1] as ResourceType; name = m[2]; }
       else if (m && !m[2]) { type = m[1] as ResourceType; name = positional[2] ?? ''; }
-      else { type = 'string'; name = key; }
+      else {
+        console.error('错误: 资源 key 格式不正确，应为 app.string.foo / app.color.primary / app.float.gap（仅支持 string|color|float）');
+        return 2;
+      }
       if (!name) { console.error('错误: 缺少资源名，如 app.string.foo'); return 2; }
+      if (!/^[A-Za-z0-9_]+$/.test(name)) {
+        console.error(`错误: 资源名 ${name} 包含非法字符（仅允许字母/数字/下划线）`);
+        return 2;
+      }
+      if (positional.length > 3 || (positional.length === 3 && m?.[2])) {
+        console.error(`错误: 多余的位置参数 ${positional.slice(2).join(' ')}`);
+        return 2;
+      }
       try {
         const file = addResource(root, type, name, value);
         console.error(`已添加 ${type}.${name} = ${value} -> ${file}`);

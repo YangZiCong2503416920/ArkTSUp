@@ -28,12 +28,21 @@ export interface TemplateOptions {
 export interface TemplateResult {
   fileName: string;
   code: string;
+  /** route-list 等场景的警告（如同名 struct 冲突） */
+  warnings?: string[];
 }
 
 function pascal(name: string): string {
   const cleaned = name.replace(/[^A-Za-z0-9_$]/g, ' ').trim();
   if (!cleaned) return 'Component';
   return cleaned.split(/\s+/).map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join('');
+}
+
+/** 校验类型名是合法 ArkTS 标识符，否则抛错 */
+function assertValidName(name: string, kind: string): void {
+  if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name)) {
+    throw new Error(`${kind}名 '${name}' 不是合法标识符（应以字母/下划线开头，仅含字母/数字/下划线）`);
+  }
 }
 
 /** 解析 'id:number,name:string' 形式的字段串 */
@@ -60,6 +69,10 @@ function defaultValue(type: string): string {
 export function renderTemplate(type: TemplateType, opts: TemplateOptions): TemplateResult {
   const name = pascal(opts.name ?? 'Sample');
   const fields = opts.fields ?? [];
+  assertValidName(name, '类型');
+  for (const f of fields) {
+    assertValidName(f.name, '字段');
+  }
 
   switch (type) {
     case 'page':
@@ -191,15 +204,27 @@ export function renderRouteList(pagesDir: string, readFile: (p: string) => strin
     entries.push({ name: m[1], path: '/' + rel.replace(/\.ets$/, '') });
   }
   entries.sort((a, b) => a.name.localeCompare(b.name));
+  // 同名 struct 去重：保留第一个，警告其余（重复成员无法编译）
+  const seen = new Set<string>();
+  const warnings: string[] = [];
+  const unique: typeof entries = [];
+  for (const e of entries) {
+    if (seen.has(e.name)) {
+      warnings.push(`警告: struct '${e.name}' 在多个文件中出现（${e.path}），路由表只保留第一处，请重命名页面`);
+      continue;
+    }
+    seen.add(e.name);
+    unique.push(e);
+  }
   const lines = [
     '/**',
     ' * 路由常量表（由 arktsup template route-list 生成，请勿手改；页面增删后重新生成）',
     ' */',
     'export class RouteConstants {',
   ];
-  for (const e of entries) {
+  for (const e of unique) {
     lines.push("  static readonly " + e.name + " = '" + e.path + "';");
   }
   lines.push('}', '');
-  return { fileName: 'RouteConstants.ets', code: lines.join('\n') };
+  return { fileName: 'RouteConstants.ets', code: lines.join('\n'), warnings };
 }

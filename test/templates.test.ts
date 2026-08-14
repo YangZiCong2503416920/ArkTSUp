@@ -72,3 +72,21 @@ test('parseFields 缺类型时默认 string', () => {
     { name: 'b', type: 'number' },
   ]);
 });
+
+test('route-list 重复 struct 名去重并警告', () => {
+  const files: Record<string, string> = {
+    'a/HomePage.ets': '@Entry\n@Component\nstruct HomePage {\n  build() {}\n}',
+    'b/HomePage.ets': '@Entry\n@Component\nstruct HomePage {\n  build() {}\n}',
+    'LoginPage.ets': '@Entry\n@Component\nstruct LoginPage {\n  build() {}\n}',
+  };
+  const r = renderRouteList('pages', (p) => files[p], () => Object.keys(files));
+  assert.ok(r.warnings && r.warnings.some((w) => w.includes('HomePage')));
+  assert.equal((r.code.match(/static readonly HomePage/g) || []).length, 1);
+  assert.match(r.code, /static readonly LoginPage/);
+});
+
+test('非法类型名/字段名报错', () => {
+  assert.throws(() => renderTemplate('page', { name: '123' }), /合法标识符/);
+  assert.throws(() => renderTemplate('model', { name: 'User', fields: parseFields('first name:string') }), /合法标识符/);
+});
+
