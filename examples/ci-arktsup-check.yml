@@ -1,5 +1,7 @@
 # ArkTSUp 质量门禁示例（复制本文件为 ci.yml 或并入你的 workflow）
-name: ArkTSUp Check Example
+# 复制本文件到你的工程 .github/workflows/ci.yml（或并入现有 workflow）
+name: CI
+
 on:
   push:
     branches: [main]

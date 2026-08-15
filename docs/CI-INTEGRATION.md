@@ -38,7 +38,7 @@ jobs:
         run: npx --yes arktsup resource check src/main/resources --min-severity error
 ```
 
-> 也提供了可直接复用的示例文件：`.github/workflows/arktsup-check.example.yml`
+> 也提供了可直接复用的示例文件：`examples/ci-arktsup-check.yml`
 
 ## 其他 CI
 
