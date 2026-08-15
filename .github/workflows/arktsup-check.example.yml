@@ -1,0 +1,16 @@
+# ArkTSUp 质量门禁示例（复制本文件为 ci.yml 或并入你的 workflow）
+name: ArkTSUp Check Example
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  arktsup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: ArkTS 严格语法检查
+        run: npx --yes arktsup check src/main/ets --min-severity error
