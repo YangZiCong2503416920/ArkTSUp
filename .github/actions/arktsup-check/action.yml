@@ -1,0 +1,21 @@
+name: 'ArkTSUp Check'
+description: 'Run arktsup check (ArkTS strict syntax) on your HarmonyOS project'
+author: 'Yanceecha'
+inputs:
+  path:
+    description: 'Directory to scan'
+    required: false
+    default: 'src/main/ets'
+  min-severity:
+    description: 'Minimum severity to fail on (error | warning)'
+    required: false
+    default: 'error'
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/setup-node@v5
+      with:
+        node-version: 22
+    - name: Run arktsup check
+      shell: bash
+      run: npx --yes arktsup check "${{ inputs.path }}" --min-severity "${{ inputs.min-severity }}"

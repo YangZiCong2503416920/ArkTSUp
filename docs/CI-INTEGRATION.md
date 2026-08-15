@@ -4,7 +4,17 @@ arktsup 是 npm 包，任何 CI 都可以用 `npx arktsup` 直接调用，**不�
 
 ## GitHub Actions（推荐）
 
-把下面这段加到你的 workflow（如 `.github/workflows/ci.yml`）：
+### 方式一：复用现成 Action（最省事）
+
+```yaml
+  - name: ArkTS 严格语法检查
+    uses: YangZiCong2503416920/ArkTSUp/.github/actions/arktsup-check@main
+    with:
+      path: src/main/ets          # 默认 src/main/ets
+      min-severity: error         # 默认 error
+```
+
+### 方式二：直接 npx（不依赖本仓库）
 
 ```yaml
   - name: ArkTS 语法检查
