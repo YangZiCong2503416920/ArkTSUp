@@ -65,3 +65,4 @@ npm run package      # 产出 plugin/arktsup-vscode.vsix
 | 0.1.2 | 2026-08-15 | 验证 Trusted Publishing 自动发布（README 增加 npm 徽章） |
 | 0.1.3 | 2026-08-15 | 修复 --version 从 package.json 读取 |
 | 0.1.4 | 2026-08-15 | json2ts 支持 JSON5、check --fix var→let、template dialog |
+| 0.1.5 | 2026-08-15 | check --fix 增加 angleCast、resource check --i18n 多语言键覆盖 |
