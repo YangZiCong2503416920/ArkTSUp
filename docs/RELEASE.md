@@ -66,3 +66,4 @@ npm run package      # 产出 plugin/arktsup-vscode.vsix
 | 0.1.3 | 2026-08-15 | 修复 --version 从 package.json 读取 |
 | 0.1.4 | 2026-08-15 | json2ts 支持 JSON5、check --fix var→let、template dialog |
 | 0.1.5 | 2026-08-15 | check --fix 增加 angleCast、resource check --i18n 多语言键覆盖 |
+| 0.1.6 | 2026-08-15 | check 规则扩至 61 条、.arktsuprc 配置、migrate 103 模块、避坑清单 |
