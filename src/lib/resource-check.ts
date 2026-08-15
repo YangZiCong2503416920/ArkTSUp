@@ -2,13 +2,15 @@
  * resource — HarmonyOS 资源文件管理。
  *
  * 检查内容：
- *  1. missingResource（error）：代码引用了不存在的资源（$r('app.string.xxx') / getStringByName('xxx')）
- *  2. unusedResource（warning）：资源文件中定义了但代码从未引用的键
+ *  1. missingResource（error）：代码/配置引用了不存在的资源（$r / getStringByName / $media: 等）
+ *  2. unusedResource（warning）：资源文件中定义了但从未被引用的键
  *
  * 资源文件格式（HarmonyOS 标准）：
  *   resources/[qualifier]/element/string.json  ->  { "string": [ { "name": "foo", "value": "bar" } ] }
  *   resources/[qualifier]/element/color.json   ->  { "color":  [ { "name": "primary", "value": "#FF0000" } ] }
  *   resources/[qualifier]/media/*.png          ->  key = 文件名（去扩展名）
+ *
+ * 引用来源：.ets 代码（$r(...)/getStringByName）与配置文件（module.json5/app.json5 的 $media:/$string: 等）。
  */
 
 import * as fs from 'node:fs';
@@ -38,10 +40,10 @@ const ELEMENT_TYPES: ResourceType[] = ['string', 'color', 'float'];
 const SKIP_DIRS = new Set(['node_modules', 'oh_modules', '.hvigor', '.git', 'build', '.idea', 'dist', '.cxx']);
 
 /** 递归列出目录下所有文件（相对 root 的路径，forward slash） */
-export function listFiles(root: string, readDir: (d: string) => fs.Dirent[] = (d) => fs.readdirSync(d, { withFileTypes: true })): string[] {
+export function listFiles(root: string): string[] {
   const out: string[] = [];
   const walk = (cur: string) => {
-    for (const e of readDir(cur)) {
+    for (const e of fs.readdirSync(cur, { withFileTypes: true })) {
       if (e.isDirectory()) {
         if (!SKIP_DIRS.has(e.name)) walk(path.join(cur, e.name));
       } else {
@@ -60,7 +62,7 @@ export function collectResourceDefs(root: string): ResourceDef[] {
   for (const f of files) {
     const dirName = path.posix.dirname(f).split('/').pop();
     if (dirName !== 'element') continue;
-    if (!/.json$/.test(f)) continue;
+    if (!/\.json$/.test(f)) continue;
     let json: Record<string, unknown>;
     try {
       json = JSON.parse(fs.readFileSync(path.join(root, f), 'utf8'));
@@ -78,18 +80,26 @@ export function collectResourceDefs(root: string): ResourceDef[] {
       }
     }
   }
-  // media 文件（resources/**/media/*.png 等）
+  // media 文件（resources/[qualifier]/media/*.png 等）
   for (const f of files) {
     if (!/\/media\//.test('/' + f)) continue;
-    const m = /\.(png|jpg|jpeg|webp|gif|svg|mp3|json)$/i.test(f);
-    if (!m) continue;
+    if (!/\.(png|jpg|jpeg|webp|gif|svg|mp3|json)$/i.test(f)) continue;
     const base = f.split('/').pop()!.replace(/\.(png|jpg|jpeg|webp|gif|svg|mp3|json)$/i, '');
     defs.push({ type: 'media', name: base, file: f });
   }
   return defs;
 }
 
-/** 扫描 .ets 代码中的资源引用（基于 TS AST，注释/字符串内的 $r(...) 不会被误报） */
+function posOf(lines: string[], index: number): { line: number; column: number } {
+  let acc = 0;
+  for (let i = 0; i < lines.length; i++) {
+    if (acc + lines[i].length + 1 > index) return { line: i + 1, column: index - acc + 1 };
+    acc += lines[i].length + 1;
+  }
+  return { line: lines.length, column: 1 };
+}
+
+/** 扫描 .ets 代码与配置文件中的资源引用（.ets 用 TS AST，注释/字符串内的 $r() 不会误报） */
 export function collectReferences(root: string): ResourceReference[] {
   const refs: ResourceReference[] = [];
   const files = listFiles(root).filter((f) => f.endsWith('.ets'));
@@ -117,6 +127,19 @@ export function collectReferences(root: string): ResourceReference[] {
       ts.forEachChild(n, walk);
     }
     walk(sf);
+  }
+  // 配置文件（module.json5 / app.json5 等）中的引用：$media:icon、$string:name 等
+  const json5Files = listFiles(root).filter((f) => f.endsWith('.json5'));
+  for (const f of json5Files) {
+    let text: string;
+    try { text = fs.readFileSync(path.join(root, f), 'utf8'); } catch { continue; }
+    const lines = text.split('\n');
+    const re = /\$(string|color|float|media):([A-Za-z0-9_.-]+)/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      const pos = posOf(lines, m.index);
+      refs.push({ file: f, line: pos.line, column: pos.column, type: m[1] as ResourceType, name: m[2], snippet: '$' + m[1] + ':' + m[2] });
+    }
   }
   return refs;
 }
@@ -180,7 +203,7 @@ export function checkResources(root: string): ResourceReport {
 }
 
 function filesCount(root: string): number {
-  return listFiles(root).filter((f) => f.endsWith('.ets') || f.endsWith('.json')).length;
+  return listFiles(root).filter((f) => f.endsWith('.ets') || f.endsWith('.json') || f.endsWith('.json5')).length;
 }
 
 /** 生成 R.ets 常量表（Record<string,string> 显式标注，符合 ArkTS） */

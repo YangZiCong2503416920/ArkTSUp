@@ -147,3 +147,25 @@ test('resource check --min-severity error 时汇总与输出一致', () => {
   assert.ok(!out.includes('warning'), 'error 级别下不应输出 warning 行');
 });
 
+test('module.json5 中的 $media/$string 引用算作使用，不误报 unused', () => {
+  const root = makeFixture();
+  // 加一个仅被 module.json5 引用的图标
+  fs.writeFileSync(path.join(root, 'resources', 'base', 'media', 'app_icon.png'), 'x');
+  fs.writeFileSync(path.join(root, 'module.json5'), [
+    '{',
+    '  "abilities": [{',
+    '    "icon": "$media:app_icon",',
+    '    "label": "$string:app_label",',
+    '  }]',
+    '}',
+  ].join('\n'));
+  fs.writeFileSync(path.join(root, 'resources', 'base', 'element', 'string.json'), JSON.stringify({
+    string: [{ name: 'app_label', value: 'KTM' }, { name: 'old_key', value: '没人用' }],
+  }, null, 2));
+  const report = checkResources(root);
+  const unused = report.findings.filter((f) => f.rule === 'unusedResource').map((f) => f.message);
+  assert.ok(!unused.some((m) => m.includes('app_icon')), '图标被 module.json5 引用，不应报 unused: ' + unused.join('|'));
+  assert.ok(!unused.some((m) => m.includes('app_label')), '字符串被 module.json5 引用，不应报 unused');
+  assert.ok(unused.some((m) => m.includes('old_key')), '真没用的键仍应报 unused');
+});
+
