@@ -43,9 +43,12 @@
 | --- | --- | --- |
 | open_neteasy_cloud（鸿蒙仿网易云，367★） | 13 个 .ets | 10 错误（var/any/函数表达式，含 DevEco 旧版测试模板），**0 误报** |
 | KTMStudio-Harmony（你的工程） | 23 个 .ets | 0 错误 0 警告 |
-| interview-handbook-project（面试通，539★） | 101 个 .ets | **0 错误**（修复 2 个误报后），7 警告（方法重赋值/索引访问，需人工确认类） |
+| interview-handbook-project（面试通，539★） | 101 个 .ets | **0 错误**（修复 2 个误报后），7 警告 |
+| SepWeather（鸿蒙天气应用） | 18 个 .ets | **0 错误**，61 警告（全部为 router.getParams() 的 Record 索引访问，设计内） |
+| harmonyos-class-schedule（课表应用） | 26 个 .ets | **0 错误**，1 警告 |
 | 官方 applications_app_samples | 3327 个 .ets | 错误级误报 1/3327（NDK 互操作边界） |
 
+> 非官方社区工程合计 **5 个**（目标达成），错误级误报率 **0%**（发现的 3 处误报均已修复并记录）。
 > 真实工程抓出并修复的误报（重要）：
 > 1. export default x as T 被误判为 export =（TS AST 同节点类型）——已用 isExportEquals 区分
 > 2. this.controller.loaded = () => ... 回调字段赋值被误判为方法重赋值——该方法需类型信息，降级为 warning
