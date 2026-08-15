@@ -1,6 +1,6 @@
 {
   "name": "arktsup",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "给 ArkTS 提效的命令行小工具集 / CLI toolkit for HarmonyOS ArkTS developers: JSON→ArkTS type generation & strict-syntax checker",
   "license": "MIT",
   "bin": {
@@ -32,8 +32,7 @@
     "code-quality"
   ],
   "devDependencies": {
-    "@types/node": "^22.10.0",
-    "typescript": "^5.7.0"
+    "@types/node": "^22.10.0"
   },
   "repository": {
     "type": "git",
@@ -42,5 +41,8 @@
   "homepage": "https://github.com/YangZiCong2503416920/ArkTSUp",
   "bugs": {
     "url": "https://github.com/YangZiCong2503416920/ArkTSUp/issues"
+  },
+  "dependencies": {
+    "typescript": "^5.7.0"
   }
 }
