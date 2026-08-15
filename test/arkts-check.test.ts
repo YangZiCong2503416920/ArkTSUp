@@ -236,7 +236,11 @@ test('noStandaloneThis', () => {
 
 test('noPrototypeAssignment / noMethodReassignment', () => {
   assert.equal(rulesOf('C.prototype = { };', 'noPrototypeAssignment').length, 1);
-  assert.equal(rulesOf('obj.method = () => { };', 'noMethodReassignment').length, 1);
+  const mr = rulesOf('obj.method = () => { };', 'noMethodReassignment');
+  assert.equal(mr.length, 1);
+  assert.equal(mr[0].severity, 'warning', '函数字段赋值与方法重赋值无法静态区分，降级为 warning');
+  // 常见的回调字段赋值模式不应报 error
+  assert.equal(rulesOf('this.controller.loaded = () => this.loading = false;', 'noMethodReassignment')[0]?.severity, 'warning');
 });
 
 test('noNewTarget / noMultipleStaticBlocks / noDefiniteAssignment', () => {

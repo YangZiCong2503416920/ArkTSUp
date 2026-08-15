@@ -41,12 +41,15 @@
 
 | 工程 | 规模 | 结果 |
 | --- | --- | --- |
-| open_neteasy_cloud（鸿蒙仿网易云，367★） | 13 个 .ets | 4 错误（var/any，位于 DevEco 旧版测试模板 TestAbility.ets），**0 误报** |
+| open_neteasy_cloud（鸿蒙仿网易云，367★） | 13 个 .ets | 10 错误（var/any/函数表达式，含 DevEco 旧版测试模板），**0 误报** |
 | KTMStudio-Harmony（你的工程） | 23 个 .ets | 0 错误 0 警告 |
+| interview-handbook-project（面试通，539★） | 101 个 .ets | **0 错误**（修复 2 个误报后），7 警告（方法重赋值/索引访问，需人工确认类） |
 | 官方 applications_app_samples | 3327 个 .ets | 错误级误报 1/3327（NDK 互操作边界） |
 
-> 说明：2026-08-15 当轮尝试克隆 ClashBox(4.1k★)/HarmoneyOpenEye(621★)/interview-handbook(539★) 时 GitHub 网络持续故障（HTTP2 协议错误、tarball 超时），仅完成 1 个社区工程。
-> 基线目标：累计 ≥5 个非官方社区工程，错误级误报率 < 0.5%。
+> 真实工程抓出并修复的误报（重要）：
+> 1. export default x as T 被误判为 export =（TS AST 同节点类型）——已用 isExportEquals 区分
+> 2. this.controller.loaded = () => ... 回调字段赋值被误判为方法重赋值——该方法需类型信息，降级为 warning
+> 基线目标：累计 ≥5 个非官方社区工程（当前 3/5），错误级误报率 < 0.5%。
 
 ## 4. 独立评审
 

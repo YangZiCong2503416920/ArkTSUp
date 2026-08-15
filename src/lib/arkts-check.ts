@@ -255,9 +255,9 @@ const RULE_INFO: Record<string, RuleMeta> = {
     fix: '用类/接口静态组合方法',
   },
   noMethodReassignment: {
-    severity: 'error',
-    message: 'ArkTS 不支持给对象方法重新赋值（arkts-no-method-reassignment）',
-    fix: '用包装函数或继承实现差异化行为',
+    severity: 'warning',
+    message: '疑似给对象方法重新赋值（arkts-no-method-reassignment；函数类型字段的赋值是合法的，需人工确认）',
+    fix: '若确为方法重赋值，改用包装函数或继承',
   },
   noNewTarget: {
     severity: 'error',
