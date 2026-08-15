@@ -2,7 +2,7 @@
   "name": "arktsup-vscode",
   "displayName": "ArkTSUp — HarmonyOS ArkTS 提效工具",
   "description": "ArkTS 检查(严格语法)与 JSON→类型 生成的 VS Code 插件，基于 arktsup CLI",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "yanceecha",
   "license": "MIT",
   "engines": {
@@ -22,7 +22,9 @@
     "workspaceContains:**/*.ets",
     "onCommand:arktsup.checkWorkspace",
     "onCommand:arktsup.checkActiveFile",
-    "onCommand:arktsup.json2tsFromClipboard"
+    "onCommand:arktsup.json2tsFromClipboard",
+    "onCommand:arktsup.migrate",
+    "onCommand:arktsup.resourceCheck"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -38,6 +40,14 @@
       {
         "command": "arktsup.json2tsFromClipboard",
         "title": "ArkTSUp: 从剪贴板 JSON 生成 ArkTS 类型"
+      },
+      {
+        "command": "arktsup.migrate",
+        "title": "ArkTSUp: 迁移废弃 API（@ohos.* → @kit.*）"
+      },
+      {
+        "command": "arktsup.resourceCheck",
+        "title": "ArkTSUp: 检查资源引用"
       }
     ],
     "configuration": {
@@ -47,6 +57,11 @@
           "type": "string",
           "default": "",
           "description": "arktsup CLI 的绝对路径（默认自动查找项目内 dist/src/cli.js）"
+        },
+        "arktsup.checkOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "保存 .ets 文件时自动运行检查（防抖 500ms）"
         }
       }
     }

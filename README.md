@@ -233,7 +233,7 @@ npm test        # 构建 + 单元测试（node:test）
 
 ### ⏳ 待做
 
-- [ ] **IDE 插件封装**：把 check / json2ts 接到 DevEco Studio / VS Code
+- [x] **IDE 插件（VS Code）**：保存自动检查 / check / migrate / resource / json2ts，见 [plugin/README.md](plugin/README.md)；DevEco Studio 插件待做
 
 ## License
 

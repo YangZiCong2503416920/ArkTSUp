@@ -4,9 +4,12 @@
 
 ## 功能
 
-- **ArkTSUp: 检查工程** — 对当前工作区运行 `arktsup check`，问题显示在 Problems 面板（支持跳转）
+- **保存自动检查** — 保存 .ets 文件自动运行检查（防抖 500ms），问题实时显示在 Problems 面板
+- **ArkTSUp: 检查工程** — 对当前工作区运行 `arktsup check`
 - **ArkTSUp: 检查当前文件** — 只检查当前打开的 .ets
 - **ArkTSUp: 从剪贴板 JSON 生成 ArkTS 类型** — 复制接口 JSON 到剪贴板，生成类型文档
+- **ArkTSUp: 迁移废弃 API** — 扫描 @ohos.* 废弃导入（dry-run 报告，可一键应用修复）
+- **ArkTSUp: 检查资源引用** — 缺失资源(error)与未使用资源(warning)诊断
 
 ## 使用
 
@@ -18,6 +21,7 @@
 | 设置 | 说明 |
 | --- | --- |
 | `arktsup.cliPath` | arktsup CLI 绝对路径（默认自动查找） |
+| `arktsup.checkOnSave` | 保存 .ets 时自动检查（默认 true） |
 
 ## 开发
 
