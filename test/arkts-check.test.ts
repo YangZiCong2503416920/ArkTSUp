@@ -267,3 +267,39 @@ test('noClassLiterals / noImportAssertions / noCallSignatures / noCtorSignatures
   assert.equal(rulesOf('type C = new (name: string) => P;', 'noCtorSignatures').length, 1);
 });
 
+// ---------- 第三轮扩充（13 条）----------
+
+test('noRequire / noExportAssignment / noUmd', () => {
+  assert.equal(rulesOf('const m = require("mod");', 'noRequire').length, 1);
+  assert.equal(rulesOf('export default pageViewModel as PageViewModel;', 'noExportAssignment').length, 0, 'export default x as T 是合法默认导出');
+  assert.equal(rulesOf('import m = require("mod");', 'noRequire').length, 1);
+  assert.equal(rulesOf('export = Point;', 'noExportAssignment').length, 1);
+  assert.equal(rulesOf('export as namespace X;', 'noUmd').length, 1);
+});
+
+test('noNsStatements / noGenericLambdas / noIs / noAliasesByIndex', () => {
+  assert.equal(rulesOf('namespace A { export let x: number = 1; x = 2; }', 'noNsStatements').length, 1);
+  assert.equal(rulesOf('const f = <T>(x: T) => x;', 'noGenericLambdas').length, 1);
+  assert.equal(rulesOf('function g(x: unknown): x is Foo { return true; }', 'noIs').length, 1);
+  assert.equal(rulesOf('type N = Point["x"];', 'noAliasesByIndex').length, 1);
+});
+
+test('noImportDefaultAs / noAmbientDecls / noModuleWildcards / noLimitedThrow', () => {
+  assert.equal(rulesOf('import { default as d } from "mod";', 'noImportDefaultAs').length, 1);
+  assert.equal(rulesOf('declare module "someModule" { }', 'noAmbientDecls').length, 1);
+  assert.equal(rulesOf('declare module "*!text" { }', 'noModuleWildcards').length, 1);
+  assert.equal(rulesOf('throw 4;', 'noLimitedThrow').length, 1);
+  assert.equal(rulesOf('throw "";', 'noLimitedThrow').length, 1);
+  assert.equal(rulesOf('throw new Error("x");', 'noLimitedThrow').length, 0);
+});
+
+test('noMisplacedImports: import 必须在其他语句之前', () => {
+  const src = [
+    "import { router } from '@kit.ArkUI';",
+    'const x = 1;',
+    "import { http } from '@kit.NetworkKit';",   // 在语句之后 -> 报错
+  ].join('\n');
+  const f = rulesOf(src, 'noMisplacedImports');
+  assert.equal(f.length, 1);
+});
+

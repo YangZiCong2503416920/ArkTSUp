@@ -67,7 +67,19 @@
 | noClassLiterals | arkts-no-class-literals | error | recipe50 |
 | noImportAssertions | arkts-no-import-assertions | error | recipe143 |
 | noCallSignatures | arkts-no-call-signatures | error | recipe14 |
-| noCtorSignatures | arkts-no-ctor-signatures-funcs | error | recipe106 |
+| noCtorSignatures | arkts-no-ctor-signatures-funcs | error | recipe106/27/15（函数/接口/对象类型中的构造签名） |
+| noRequire | arkts-no-require | error | recipe121（require 与 import 赋值） |
+| noExportAssignment | arkts-no-export-assignment | error | recipe126 |
+| noUmd | arkts-no-umd | error | recipe130（export as namespace） |
+| noNsStatements | arkts-no-ns-statements | error | recipe116 |
+| noGenericLambdas | arkts-no-generic-lambdas | error | recipe49 |
+| noIs | arkts-no-is | error | recipe96 |
+| noAliasesByIndex | arkts-no-aliases-by-index | error | recipe28 |
+| noImportDefaultAs | arkts-no-import-default-as | error | recipe120 |
+| noModuleWildcards | arkts-no-module-wildcards | error | recipe129 |
+| noAmbientDecls | arkts-no-ambient-decls | error | recipe128 |
+| noMisplacedImports | arkts-no-misplaced-imports | error | recipe150 |
+| noLimitedThrow | arkts-limited-throw | error | recipe87 |
 
 > propsByIndex 降级为 **warning** 的原因：recipe29 明确豁免 Record / Map / 枚举 / 类型化数组的索引访问，
 > 而静态检测无法分辨索引对象的类型。warning 不阻塞 CI，仅提示人工确认。

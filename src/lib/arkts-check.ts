@@ -324,6 +324,66 @@ const RULE_INFO: Record<string, RuleMeta> = {
     message: 'ArkTS 不支持构造签名类型（arkts-no-ctor-signatures-funcs）',
     fix: '改用 lambda 或类',
   },
+  noRequire: {
+    severity: 'error',
+    message: 'ArkTS 不支持 require 导入与 import 赋值（arkts-no-require）',
+    fix: '改用常规 import 语法',
+  },
+  noExportAssignment: {
+    severity: 'error',
+    message: 'ArkTS 不支持 export = 语法（arkts-no-export-assignment）',
+    fix: '改用常规 export / import',
+  },
+  noNsStatements: {
+    severity: 'error',
+    message: 'ArkTS 命名空间中不支持非声明语句（arkts-no-ns-statements）',
+    fix: '把可执行语句放进函数',
+  },
+  noGenericLambdas: {
+    severity: 'error',
+    message: 'ArkTS 不支持泛型箭头函数（arkts-no-generic-lambdas）',
+    fix: '改用普通泛型函数',
+  },
+  noIs: {
+    severity: 'error',
+    message: 'ArkTS 不支持 is 类型守卫（arkts-no-is）',
+    fix: '改用 instanceof 配合 as 收窄',
+  },
+  noAliasesByIndex: {
+    severity: 'error',
+    message: 'ArkTS 不支持索引访问类型 T[K]（arkts-no-aliases-by-index）',
+    fix: '直接使用具体类型名',
+  },
+  noImportDefaultAs: {
+    severity: 'error',
+    message: 'ArkTS 不支持 import { default as x } 语法（arkts-no-import-default-as）',
+    fix: '改用 import x from ...',
+  },
+  noModuleWildcards: {
+    severity: 'error',
+    message: 'ArkTS 不支持模块名通配符（arkts-no-module-wildcards）',
+    fix: '使用常规 export 语法',
+  },
+  noAmbientDecls: {
+    severity: 'error',
+    message: 'ArkTS 不支持 ambient module 声明（arkts-no-ambient-decls）',
+    fix: '使用 ArkTS 自己的 JS 互操作机制',
+  },
+  noUmd: {
+    severity: 'error',
+    message: 'ArkTS 不支持 UMD 定义（arkts-no-umd）',
+    fix: '使用常规 export / import 语法',
+  },
+  noMisplacedImports: {
+    severity: 'error',
+    message: 'import 语句必须在其他语句之前（arkts-no-misplaced-imports）',
+    fix: '把所有 import 移到文件顶部',
+  },
+  noLimitedThrow: {
+    severity: 'error',
+    message: 'ArkTS 只允许 throw Error 及其子类（arkts-limited-throw）',
+    fix: 'throw new Error(...) 或自定义 Error 子类',
+  },
 };
 
 function snippetOf(sourceFile: ts.SourceFile, node: ts.Node): string {
@@ -507,6 +567,18 @@ export function scanSource(file: string, sourceText: string, minSeverity: Severi
     if (ts.isReturnStatement(parent)) return enclosingFunctionHasReturnType(parent);
     // 其余位置（函数实参、数组元素、赋值右值等）保守视为有上下文，避免误报
     return true;
+  }
+
+  /** import 必须在其他语句之前 */
+  function checkMisplacedImports(): void {
+    let seenNonImport = false;
+    for (const stmt of sf.statements) {
+      if (ts.isImportDeclaration(stmt)) {
+        if (seenNonImport) add('noMisplacedImports', stmt);
+      } else {
+        seenNonImport = true;
+      }
+    }
   }
 
   /** @ts-ignore / @ts-nocheck / @ts-expect-error 注释检测 */
@@ -757,10 +829,60 @@ export function scanSource(file: string, sourceText: string, minSeverity: Severi
     if (ts.isCallSignatureDeclaration(node)) add('noCallSignatures', node);
     if (ts.isConstructSignatureDeclaration(node) || ts.isConstructorTypeNode(node)) add('noCtorSignatures', node);
 
+    // 47. require 导入 / import 赋值
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'require') {
+      add('noRequire', node);
+    }
+    if (ts.isImportEqualsDeclaration(node)) add('noRequire', node);
+    // 48. export = / export as namespace
+    // export = 是 ExportAssignment(isExportEquals=true)；export default x as T 也是 ExportAssignment 但合法
+    if (ts.isExportAssignment(node) && node.isExportEquals) {
+      add('noExportAssignment', node);
+    }
+    if (ts.isNamespaceExportDeclaration(node)) add('noUmd', node);
+    // 49. 命名空间中的非声明语句
+    if (ts.isModuleBlock(node)) {
+      const parent = node.parent;
+      if (parent && ts.isModuleDeclaration(parent)) {
+        for (const stmt of node.statements) {
+          if (!(ts.isVariableStatement(stmt) || ts.isFunctionDeclaration(stmt) || ts.isClassDeclaration(stmt)
+            || ts.isInterfaceDeclaration(stmt) || ts.isModuleDeclaration(stmt) || ts.isImportDeclaration(stmt)
+            || ts.isEnumDeclaration(stmt) || ts.isTypeAliasDeclaration(stmt))) {
+            add('noNsStatements', stmt);
+          }
+        }
+      }
+    }
+    // 50. 泛型箭头函数
+    if (ts.isArrowFunction(node) && node.typeParameters && node.typeParameters.length > 0) {
+      add('noGenericLambdas', node);
+    }
+    // 51. is 类型守卫
+    if (ts.isTypePredicateNode(node)) add('noIs', node);
+    // 52. 索引访问类型
+    if (ts.isIndexedAccessTypeNode(node)) add('noAliasesByIndex', node);
+    // 53. import { default as x }
+    if (ts.isImportSpecifier(node) && node.propertyName && node.propertyName.text === 'default') {
+      add('noImportDefaultAs', node);
+    }
+    // 54. ambient module / 通配符模块名
+    if (ts.isModuleDeclaration(node) && ts.isStringLiteral(node.name)) {
+      add(node.name.text.includes('*') ? 'noModuleWildcards' : 'noAmbientDecls', node);
+    }
+    // 55. throw 非 Error
+    if (ts.isThrowStatement(node)) {
+      const e = node.expression;
+      const bad = ts.isStringLiteral(e) || ts.isNumericLiteral(e)
+        || e.kind === ts.SyntaxKind.TrueKeyword || e.kind === ts.SyntaxKind.FalseKeyword
+        || ts.isBinaryExpression(e) || ts.isPrefixUnaryExpression(e) || ts.isArrayLiteralExpression(e);
+      if (bad) add('noLimitedThrow', node);
+    }
+
     ts.forEachChild(node, walk);
   }
 
   checkTsSuppress();
+  checkMisplacedImports();
   walk(sf);
   return findings;
 }

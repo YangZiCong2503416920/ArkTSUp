@@ -191,7 +191,7 @@ const HELP = `arktsup check — 扫描 .ets 源码中的 ArkTS 不兼容写法
   varDecl               不支持 var（arkts-no-var）
   privateIdentifiers    不支持 # 私有字段（arkts-no-private-identifiers）
   stdlibRestricted      受限标准库 API（arkts-limited-stdlib）
-  +22 条（v0.2 新增）: 函数表达式/生成器/apply-call-bind/参数解构/this 类型/
+  +34 条（v0.2 新增）: 函数表达式/生成器/apply-call-bind/参数解构/this 类型/
                      原型赋值/方法重赋值/new.target/多静态块/确定赋值断言/
                      globalThis/映射类型/嵌套函数/枚举混合/循环外逗号/
                      ctor 参数属性/类表达式/import 断言/调用与构造签名
