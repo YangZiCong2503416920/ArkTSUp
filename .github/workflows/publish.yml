@@ -1,8 +1,10 @@
 name: Publish to npm (Trusted Publishing)
 
-# 触发: 推送 v* 版本标签（git tag v0.1.0 && git push origin v0.1.0）
+# 触发: 推送 v* 版本标签（git tag v0.1.2 && git push origin v0.1.2）
 # 原理: GitHub OIDC -> npm 信任发布，无需令牌、无需 2FA
-# 前提: npmjs.com 上为 arktsup 配置 Trusted Publishing（关联本仓库与本 workflow）
+# 前置条件(必做一次): npmjs.com 为 arktsup 配置 Trusted Publishing，
+#   关联本仓库 YangZiCong2503416920/ArkTSUp 与本 workflow(publish.yml)
+# 说明: 若 package.json 版本已存在于 registry（如手动发过），自动跳过发布，保持 CI 绿。
 
 on:
   push:
@@ -22,5 +24,17 @@ jobs:
           registry-url: https://registry.npmjs.org/
       - run: npm ci
       - run: npm test
+      - name: 检查版本是否已发布（幂等保护）
+        id: check
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view arktsup@$VERSION version 2>/dev/null | grep -q "$VERSION"; then
+            echo "版本 $VERSION 已在 registry 上，跳过发布"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
       # Trusted Publishing：npm 自动用 OIDC 换取发布令牌，无需 NODE_AUTH_TOKEN
-      - run: npm publish --provenance
+      - name: Publish
+        if: steps.check.outputs.skip != 'true'
+        run: npm publish --provenance

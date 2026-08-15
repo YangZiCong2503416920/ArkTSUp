@@ -6,7 +6,7 @@
 
 面向鸿蒙（HarmonyOS）ArkTS 开发者的痛点解决方案集合。全部工具为本地 CLI，不依赖 DevEco Studio，可直接对工程文件做转换、扫描、修复。生成/修复的结果严格贴合 ArkTS 语法限制（无 any、无任意联合、对象字面量必须显式声明类型等）。
 
-> 质量保障：质检过程与证据见 [docs/QUALITY-REPORT.md](docs/QUALITY-REPORT.md)，独立评审报告见 [docs/QUALITY-REVIEW-REPORT.md](docs/QUALITY-REVIEW-REPORT.md)，规则溯源见 [docs/RULES.md](docs/RULES.md)。
+> 质量保障：质检过程与证据见 [docs/QUALITY-REPORT.md](docs/QUALITY-REPORT.md)，独立评审报告见 [docs/QUALITY-REVIEW-REPORT.md](docs/QUALITY-REVIEW-REPORT.md)，规则溯源见 [docs/RULES.md](docs/RULES.md)。发布流程见 [docs/RELEASE.md](docs/RELEASE.md)。
 
 ## 已包含的工具
 
