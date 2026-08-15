@@ -20,9 +20,10 @@ jobs:
       - uses: actions/checkout@v5
       # 注意: OIDC 专用 workflow 不要给 setup-node 配 registry-url，
       # 否则会写入占位 _authToken 遮蔽 OIDC 交换，导致 404 (npm/cli#8730, actions/setup-node#1477)
+      # OIDC 信任发布需要 npm 11+（Node 24 自带）；npm 10 不会自动做 OIDC 交换
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 24
       - run: npm ci
       - run: npm test
       - name: 检查版本是否已发布（幂等保护）
