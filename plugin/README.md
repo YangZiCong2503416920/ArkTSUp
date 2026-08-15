@@ -32,6 +32,20 @@ npm run build      # 编译 + 复制 arktsup lib
 npm run package    # 产出 .vsix
 ```
 
+## Marketplace 上架（可选）
+
+1. 在 https://marketplace.visualstudio.com/manage 用你的微软账号创建发布者（publisher 名与 package.json 一致：yanceecha）
+2. 生成 PAT（需要 Marketplace: Manage 权限）：https://marketplace.visualstudio.com/manage/publishers/<publisher>/pat
+3. 发布：
+
+```bash
+cd plugin
+npx --yes @vscode/vsce login yanceecha
+npx --yes @vscode/vsce publish
+```
+
+> .vscodeignore 已配置，发布包只含入口与 arktsup lib（20 个文件，~60KB），不含源码/测试。
+
 ## 使用示例
 
 打开命令面板：**Ctrl+Shift+P**（macOS: Cmd+Shift+P），输入以下任一命令：
