@@ -62,3 +62,4 @@ npm run package      # 产出 plugin/arktsup-vscode.vsix
 | 0.1.0 | 2026-08-15 | 首个 npm 发布（**已弃用**：缺少 typescript 运行时依赖） |
 | 0.1.1 | 2026-08-15 | 修复 typescript 依赖，latest |
 | v0.1.1 (tag) | 2026-08-15 | GitHub 对应 tag |
+| 0.1.2 | 2026-08-15 | 验证 Trusted Publishing 自动发布（README 增加 npm 徽章） |
