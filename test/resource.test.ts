@@ -169,3 +169,22 @@ test('module.json5 中的 $media/$string 引用算作使用，不误报 unused',
   assert.ok(unused.some((m) => m.includes('old_key')), '真没用的键仍应报 unused');
 });
 
+test('i18n: 检查 locale 键覆盖（base 缺失=error，未翻译=warning）', () => {
+  const root = makeFixture();
+  // zh_CN 有 base 缺失的键 + 缺少 base 已有键
+  const zhDir = path.join(root, 'resources', 'zh_CN', 'element');
+  fs.mkdirSync(zhDir, { recursive: true });
+  fs.writeFileSync(path.join(zhDir, 'string.json'), JSON.stringify({
+    string: [
+      { name: 'hello', value: '你好' },   // base 有，zh 有 -> OK
+      { name: 'only_zh', value: '仅中文' }, // base 没有 -> error
+    ],
+  }, null, 2));
+  // base 里 old_key 在 zh 缺失 -> warning（zh 已有 hello，故只缺 old_key）
+  const report = checkResources(root, { i18n: true });
+  const missingInBase = report.findings.filter((f) => f.rule === 'i18nMissingInBase');
+  const untranslated = report.findings.filter((f) => f.rule === 'i18nUntranslated');
+  assert.ok(missingInBase.some((f) => f.message.includes('only_zh')), '只在 zh_CN 定义的键应报 error');
+  assert.ok(untranslated.some((f) => f.message.includes('old_key')), 'base 有但 zh_CN 缺的键应报 warning');
+  assert.ok(untranslated.some((f) => f.message.includes('hello')) === false, 'hello 在 zh_CN 已翻译，不应报');
+});

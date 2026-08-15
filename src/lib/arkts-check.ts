@@ -609,9 +609,24 @@ export function applyAutoFixes(sourceText: string): FixSummary {
   const byRule: Record<string, number> = { noAny: anyRes.fixed };
   const sf = ts.createSourceFile('fix.ets', anyRes.text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const varPositions: { start: number; end: number }[] = [];
+  const castReplacements: { start: number; end: number; text: string }[] = [];
   function walk(n: ts.Node): void {
     if (ts.isVariableDeclarationList(n) && !(n.flags & ts.NodeFlags.BlockScoped)) {
       varPositions.push({ start: n.getStart(sf), end: n.getStart(sf) + 3 });
+    }
+    // <T>expr -> expr as T（官方 arkts-as-casts 的推荐写法）
+    if (ts.isTypeAssertionExpression(n)) {
+      const expr = n.expression;
+      const typeText = n.type.getText(sf);
+      const exprText = expr.getText(sf);
+      const simple = ts.isIdentifier(expr) || ts.isPropertyAccessExpression(expr) || ts.isCallExpression(expr)
+        || ts.isElementAccessExpression(expr) || ts.isParenthesizedExpression(expr) || ts.isNewExpression(expr)
+        || expr.kind === ts.SyntaxKind.ThisKeyword;
+      castReplacements.push({
+        start: n.getStart(sf),
+        end: n.getEnd(),
+        text: (simple ? exprText : '(' + exprText + ')') + ' as ' + typeText,
+      });
     }
     ts.forEachChild(n, walk);
   }
@@ -624,5 +639,13 @@ export function applyAutoFixes(sourceText: string): FixSummary {
     fixed++;
   }
   byRule.varDecl = fixed;
-  return { text, total: anyRes.fixed + fixed, byRule };
+  // angleCast 替换（与 var 的位置不重叠，独立应用）
+  let castFixed = 0;
+  for (const r of castReplacements.sort((a, b) => b.start - a.start)) {
+    if (text.slice(r.start, r.end) === r.text) continue;
+    text = text.slice(0, r.start) + r.text + text.slice(r.end);
+    castFixed++;
+  }
+  byRule.angleCast = castFixed;
+  return { text, total: anyRes.fixed + fixed + castFixed, byRule };
 }

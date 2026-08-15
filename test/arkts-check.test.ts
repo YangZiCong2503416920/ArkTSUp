@@ -194,3 +194,17 @@ test('applyAutoFixes: any/unknown->Object 且 var->let', () => {
   assert.match(res.text, /"var is just text"/);
   assert.ok(!res.text.includes('var x'));
 });
+
+test('applyAutoFixes: angleCast <T>expr -> expr as T', () => {
+  const { applyAutoFixes } = require('../src/lib/arkts-check') as typeof import('../src/lib/arkts-check');
+  const src = [
+    'const a = <Point>x;',
+    'const b = <Foo>(a + b);',
+    'const c = x as Bar;   // 已是 as 写法，不变',
+  ].join('\n');
+  const res = applyAutoFixes(src);
+  assert.equal(res.byRule.angleCast, 2);
+  assert.match(res.text, /const a = x as Point;/);
+  assert.match(res.text, /const b = \(a \+ b\) as Foo;/);
+  assert.match(res.text, /const c = x as Bar;/);
+});

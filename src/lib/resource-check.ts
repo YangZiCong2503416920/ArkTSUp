@@ -144,6 +144,36 @@ export function collectReferences(root: string): ResourceReference[] {
   return refs;
 }
 
+/** 按 locale 目录收集 element 键：base -> {type: [names]} */
+export interface LocaleKeys {
+  [locale: string]: Record<string, string[]>;
+}
+
+export function collectElementKeysByLocale(root: string): LocaleKeys {
+  const out: LocaleKeys = {};
+  for (const f of listFiles(root)) {
+    const m = /^resources\/([^/]+)\/element\/(string|color|float)\.json$/.exec(f);
+    if (!m) continue;
+    const locale = m[1];
+    const type = m[2];
+    let json: Record<string, unknown>;
+    try { json = JSON.parse(fs.readFileSync(path.join(root, f), 'utf8')); } catch { continue; }
+    const arr = json[type];
+    if (!Array.isArray(arr)) continue;
+    out[locale] = out[locale] ?? { string: [], color: [], float: [] };
+    for (const item of arr) {
+      const obj = item as { name?: unknown };
+      if (obj && typeof obj.name === 'string') out[locale][type].push(obj.name);
+    }
+  }
+  for (const k of Object.keys(out)) {
+    out[k].string.sort();
+    out[k].color.sort();
+    out[k].float.sort();
+  }
+  return out;
+}
+
 export interface ResourceReport {
   findings: Finding[];
   filesScanned: number;
@@ -153,7 +183,12 @@ export interface ResourceReport {
   resourceKeys: Record<string, string[]>;
 }
 
-export function checkResources(root: string): ResourceReport {
+export interface CheckResourceOptions {
+  /** 检查多语言键覆盖（base 与各 locale 的键差异） */
+  i18n?: boolean;
+}
+
+export function checkResources(root: string, options: CheckResourceOptions = {}): ResourceReport {
   const defs = collectResourceDefs(root);
   const byType: Record<string, Map<string, ResourceDef>> = { string: new Map(), color: new Map(), float: new Map(), media: new Map() };
   for (const d of defs) byType[d.type].set(d.name, d);
@@ -191,6 +226,47 @@ export function checkResources(root: string): ResourceReport {
         fix: '确认无用后从资源文件中删除',
         snippet: d.name,
       });
+    }
+  }
+
+  // i18n 键覆盖检查（仅当存在多个 locale 目录时才有意义）
+  if (options.i18n) {
+    const locales = collectElementKeysByLocale(root);
+    const base = locales['base'];
+    if (base) {
+      for (const [locale, keys] of Object.entries(locales)) {
+        if (locale === 'base') continue;
+        for (const type of ['string', 'color', 'float'] as const) {
+          const baseSet = new Set(base[type] ?? []);
+          const locSet = new Set(keys[type] ?? []);
+          for (const k of locSet) {
+            if (!baseSet.has(k)) {
+              findings.push({
+                file: `resources/${locale}/element/${type}.json`,
+                line: 1, column: 1,
+                severity: 'error',
+                rule: 'i18nMissingInBase',
+                message: `${type}.${k} 只在 ${locale} 定义，base 中缺失（其他语言会解析失败）`,
+                fix: `把 ${k} 也加入 resources/base/element/${type}.json`,
+                snippet: k,
+              });
+            }
+          }
+          for (const k of baseSet) {
+            if (!locSet.has(k)) {
+              findings.push({
+                file: `resources/${locale}/element/${type}.json`,
+                line: 1, column: 1,
+                severity: 'warning',
+                rule: 'i18nUntranslated',
+                message: `${type}.${k} 在 base 中定义但 ${locale} 未翻译（会回退到 base 文案）`,
+                fix: `在 ${locale} 的 ${type}.json 中补充翻译`,
+                snippet: k,
+              });
+            }
+          }
+        }
+      }
     }
   }
 

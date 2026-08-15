@@ -78,7 +78,7 @@ arktsup check src/entry/Index.ets
 arktsup check src/main/ets --format json
 arktsup check src/main/ets --min-severity error
 
-# 自动修复：any/unknown -> Object、var -> let（any 部分需再手动收窄为具体类型）
+# 自动修复：any/unknown -> Object、var -> let、<T>expr -> expr as T（any 部分需再手动收窄）
 arktsup check src/main/ets --fix
 ```
 
@@ -158,6 +158,9 @@ export class RouteConstants {
 ```bash
 # 检查：代码引用缺失的资源（error）+ 定义了但没人用的资源（warning）
 arktsup resource check src/main/resources
+
+# 多语言键覆盖检查：只在某 locale 定义而 base 缺失(error)、base 有但某 locale 未翻译(warning)
+arktsup resource check src/main/resources --i18n
 
 # 生成资源路径常量表 R.ets（Record<string,string> 显式标注，符合 ArkTS）
 arktsup resource gen src/main --out ets/common/R.ets

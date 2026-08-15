@@ -29,6 +29,7 @@ export function runResource(argv: string[]): number {
   let value: string | undefined;
   let format: 'text' | 'json' = 'text';
   let minSeverity: Severity = 'warning';
+  let i18n = false;
 
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -42,6 +43,9 @@ export function runResource(argv: string[]): number {
         format = v;
         break;
       }
+      case '--i18n':
+        i18n = true;
+        break;
       case '--min-severity': {
         const v = argv[++i];
         if (v !== 'error' && v !== 'warning') { console.error('错误: --min-severity 只支持 error | warning'); return 2; }
@@ -69,7 +73,7 @@ export function runResource(argv: string[]): number {
 
   switch (sub) {
     case 'check': {
-      const report = checkResources(root);
+      const report = checkResources(root, { i18n });
       const findings = report.findings.filter(
         (f) => (minSeverity === 'error' ? f.severity === 'error' : true)
       );
@@ -160,10 +164,12 @@ const HELP = `arktsup resource — HarmonyOS 资源文件管理
   --value <text>    add 的资源值
   --format <fmt>    check 输出格式 text | json
   --min-severity    check 最低级别 error | warning
+  --i18n            检查多语言键覆盖（base 与各 locale 的键差异）
   -h, --help        显示帮助
 
 示例:
   arktsup resource check src/main/resources
+  arktsup resource check src/main/resources --i18n   # 含多语言键覆盖检查
   arktsup resource gen --out ets/common/R.ets
   arktsup resource add app.string.welcome --value "欢迎回来"
   arktsup resource add app.color.primary --value "#FF007DFF"
