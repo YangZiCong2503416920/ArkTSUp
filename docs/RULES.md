@@ -46,6 +46,28 @@
 | varDecl | arkts-no-var | error | recipe5 |
 | privateIdentifiers | arkts-no-private-identifiers | error | recipe3 |
 | stdlibRestricted | arkts-limited-stdlib | error | recipe144（本工具只实现其中高频项，见代码注释） |
+| noFuncExpressions | arkts-no-func-expressions | error | recipe46（注意：DevEco 旧版测试模板的 function() 会被标记，属迁移目标，新模板用箭头函数） |
+| noGenerators | arkts-no-generators | error | recipe94 |
+| noFuncApplyCall | arkts-no-func-apply-call | error | recipe152 |
+| noFuncBind | arkts-no-func-bind | warning | recipe140 |
+| noDestructParams | arkts-no-destruct-params | error | recipe91 |
+| noTypingWithThis | arkts-no-typing-with-this | error | recipe21 |
+| noStandaloneThis | arkts-no-standalone-this | error | recipe93 |
+| noPrototypeAssignment | arkts-no-prototype-assignment | error | recipe136 |
+| noMethodReassignment | arkts-no-method-reassignment | error | recipe52 |
+| noNewTarget | arkts-no-new-target | error | recipe132 |
+| noMultipleStaticBlocks | arkts-no-multiple-static-blocks | error | recipe16 |
+| noDefiniteAssignment | arkts-no-definite-assignment | warning | recipe134 |
+| noGlobalThis | arkts-no-globalthis | error | recipe137 |
+| noMappedTypes | arkts-no-mapped-types | error | recipe83 |
+| noNestedFuncs | arkts-no-nested-funcs | error | recipe92 |
+| noEnumMixedTypes | arkts-no-enum-mixed-types | error | recipe111 |
+| noCommaOutsideLoops | arkts-no-comma-outside-loops | error | recipe71 |
+| noCtorPropDecls | arkts-no-ctor-prop-decls | error | recipe25 |
+| noClassLiterals | arkts-no-class-literals | error | recipe50 |
+| noImportAssertions | arkts-no-import-assertions | error | recipe143 |
+| noCallSignatures | arkts-no-call-signatures | error | recipe14 |
+| noCtorSignatures | arkts-no-ctor-signatures-funcs | error | recipe106 |
 
 > propsByIndex 降级为 **warning** 的原因：recipe29 明确豁免 Record / Map / 枚举 / 类型化数组的索引访问，
 > 而静态检测无法分辨索引对象的类型。warning 不阻塞 CI，仅提示人工确认。

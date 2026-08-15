@@ -214,6 +214,116 @@ const RULE_INFO: Record<string, RuleMeta> = {
     message: '该标准库 API 在 ArkTS 中受限制（arkts-limited-stdlib）',
     fix: '改用静态类型友好的替代方案（如 Object.keys/Map 等）',
   },
+  noFuncExpressions: {
+    severity: 'error',
+    message: 'ArkTS 不支持函数表达式（arkts-no-func-expressions）',
+    fix: '改用箭头函数，如 const f = (s: string): void => {...}',
+  },
+  noGenerators: {
+    severity: 'error',
+    message: 'ArkTS 不支持生成器函数（arkts-no-generators）',
+    fix: '改用 async/await 实现异步多任务',
+  },
+  noFuncApplyCall: {
+    severity: 'error',
+    message: 'ArkTS 不支持 Function.apply / Function.call（arkts-no-func-apply-call）',
+    fix: '改用普通方法调用',
+  },
+  noFuncBind: {
+    severity: 'warning',
+    message: 'ArkTS 不支持 Function.bind（arkts-no-func-bind）',
+    fix: '改用箭头函数捕获 this 或显式传参',
+  },
+  noDestructParams: {
+    severity: 'error',
+    message: 'ArkTS 不支持参数解构（arkts-no-destruct-params）',
+    fix: '参数直接传递，函数体内逐字段取值',
+  },
+  noTypingWithThis: {
+    severity: 'error',
+    message: 'ArkTS 不支持 this 类型标注（arkts-no-typing-with-this）',
+    fix: '改用显式具体类型',
+  },
+  noStandaloneThis: {
+    severity: 'error',
+    message: 'ArkTS 不支持在独立函数/静态方法中使用 this（arkts-no-standalone-this）',
+    fix: '仅实例方法内使用 this',
+  },
+  noPrototypeAssignment: {
+    severity: 'error',
+    message: 'ArkTS 不支持原型赋值（arkts-no-prototype-assignment）',
+    fix: '用类/接口静态组合方法',
+  },
+  noMethodReassignment: {
+    severity: 'error',
+    message: 'ArkTS 不支持给对象方法重新赋值（arkts-no-method-reassignment）',
+    fix: '用包装函数或继承实现差异化行为',
+  },
+  noNewTarget: {
+    severity: 'error',
+    message: 'ArkTS 不支持 new.target（arkts-no-new-target）',
+    fix: '改用其他方式判断构造上下文',
+  },
+  noMultipleStaticBlocks: {
+    severity: 'error',
+    message: 'ArkTS 一个类只允许一个静态块（arkts-no-multiple-static-blocks）',
+    fix: '把多个静态块合并为一个',
+  },
+  noDefiniteAssignment: {
+    severity: 'warning',
+    message: 'ArkTS 不支持确定赋值断言 x!: T（arkts-no-definite-assignment）',
+    fix: '声明时初始化，如 let x: number = 0',
+  },
+  noGlobalThis: {
+    severity: 'error',
+    message: 'ArkTS 不支持 globalThis（arkts-no-globalthis）',
+    fix: '避免全局可变状态',
+  },
+  noMappedTypes: {
+    severity: 'error',
+    message: 'ArkTS 不支持映射类型（arkts-no-mapped-types）',
+    fix: '用显式类型/类实现',
+  },
+  noNestedFuncs: {
+    severity: 'error',
+    message: 'ArkTS 不支持函数内嵌套函数声明（arkts-no-nested-funcs）',
+    fix: '改用箭头函数 lambda',
+  },
+  noEnumMixedTypes: {
+    severity: 'error',
+    message: '枚举成员只能用编译期常量同类型初始化（arkts-no-enum-mixed-types）',
+    fix: '移除运行时表达式初始化，保持成员类型一致',
+  },
+  noCommaOutsideLoops: {
+    severity: 'error',
+    message: '逗号运算符只允许用于 for 循环（arkts-no-comma-outside-loops）',
+    fix: '拆成多条语句',
+  },
+  noCtorPropDecls: {
+    severity: 'error',
+    message: 'ArkTS 不支持在 constructor 参数中声明字段（arkts-no-ctor-prop-decls）',
+    fix: '在类体内显式声明字段',
+  },
+  noClassLiterals: {
+    severity: 'error',
+    message: 'ArkTS 不支持类表达式（arkts-no-class-literals）',
+    fix: '显式声明具名类',
+  },
+  noImportAssertions: {
+    severity: 'error',
+    message: 'ArkTS 不支持 import 断言（arkts-no-import-assertions）',
+    fix: '使用普通 import 语法',
+  },
+  noCallSignatures: {
+    severity: 'error',
+    message: 'ArkTS 不支持对象类型中的调用签名（arkts-no-call-signatures）',
+    fix: '用类替代，如 class X { invoke(...): ... }',
+  },
+  noCtorSignatures: {
+    severity: 'error',
+    message: 'ArkTS 不支持构造签名类型（arkts-no-ctor-signatures-funcs）',
+    fix: '改用 lambda 或类',
+  },
 };
 
 function snippetOf(sourceFile: ts.SourceFile, node: ts.Node): string {
@@ -221,6 +331,19 @@ function snippetOf(sourceFile: ts.SourceFile, node: ts.Node): string {
   const end = node.getEnd();
   const text = sourceFile.text.slice(start, end).replace(/\s+/g, ' ').trim();
   return text.length > 120 ? text.slice(0, 117) + '...' : text;
+}
+
+/** 判断表达式是否为编译期常量（字面量/一元/二元运算） */
+function isConstantExpression(n: ts.Expression): boolean {
+  if (ts.isStringLiteral(n) || ts.isNumericLiteral(n) || ts.isPrefixUnaryExpression(n)
+    || ts.isParenthesizedExpression(n)
+    || n.kind === ts.SyntaxKind.TrueKeyword || n.kind === ts.SyntaxKind.FalseKeyword || n.kind === ts.SyntaxKind.NullKeyword) {
+    return true;
+  }
+  if (ts.isBinaryExpression(n)) {
+    return isConstantExpression(n.left) && isConstantExpression(n.right);
+  }
+  return false;
 }
 
 /** ArkTS 中禁止用字面量初始化的"类型标注"（Object/object/any/unknown 及其数组形式） */
@@ -530,6 +653,109 @@ export function scanSource(file: string, sourceText: string, minSeverity: Severi
     if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'eval') {
       add('stdlibRestricted', node);
     }
+
+    // 26. 函数表达式（箭头函数允许）
+    if (ts.isFunctionExpression(node)) add('noFuncExpressions', node);
+    // 27. 生成器函数
+    if ((ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node)) && node.asteriskToken) {
+      add('noGenerators', node);
+    }
+    // 28. Function.apply / call / bind
+    if (ts.isPropertyAccessExpression(node) && node.parent && ts.isCallExpression(node.parent) && node.parent.expression === node) {
+      if (node.name.text === 'apply' || node.name.text === 'call') add('noFuncApplyCall', node);
+      if (node.name.text === 'bind') add('noFuncBind', node);
+    }
+    // 29. 参数解构
+    if (ts.isParameter(node) && (ts.isObjectBindingPattern(node.name) || ts.isArrayBindingPattern(node.name))) {
+      add('noDestructParams', node);
+    }
+    // 30. this 类型标注
+    if (ts.isThisTypeNode(node)) add('noTypingWithThis', node);
+    // 31. 独立函数/静态方法中的 this
+    if (node.kind === ts.SyntaxKind.ThisKeyword) {
+      let cur = node.parent;
+      while (cur) {
+        if (ts.isMethodDeclaration(cur)) {
+          const isStatic = cur.modifiers?.some((m) => m.kind === ts.SyntaxKind.StaticKeyword);
+          if (isStatic) add('noStandaloneThis', node);
+          break;
+        }
+        if (ts.isFunctionDeclaration(cur) || ts.isFunctionExpression(cur)) {
+          add('noStandaloneThis', node);
+          break;
+        }
+        if (ts.isClassDeclaration(cur)) break; // 类字段初始化里的 this 属于实例，放行
+        cur = cur.parent;
+      }
+    }
+    // 32. 原型赋值
+    if (ts.isPropertyAccessExpression(node) && node.name.text === 'prototype'
+      && node.parent && ts.isBinaryExpression(node.parent) && node.parent.left === node
+      && node.parent.operatorToken.kind === ts.SyntaxKind.EqualsToken) {
+      add('noPrototypeAssignment', node);
+    }
+    // 33. 方法重新赋值（给对象属性赋函数）
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken
+      && ts.isPropertyAccessExpression(node.left)
+      && (ts.isArrowFunction(node.right) || ts.isFunctionExpression(node.right))) {
+      add('noMethodReassignment', node);
+    }
+    // 34. new.target（AST 中是 MetaProperty 节点）
+    if (ts.isMetaProperty(node) && node.keywordToken === ts.SyntaxKind.NewKeyword) {
+      add('noNewTarget', node);
+    }
+    // 35. 多个静态块
+    if (ts.isClassDeclaration(node)) {
+      const staticBlocks = node.members.filter((m) => ts.isClassStaticBlockDeclaration(m));
+      if (staticBlocks.length > 1) {
+        for (let i = 1; i < staticBlocks.length; i++) add('noMultipleStaticBlocks', staticBlocks[i]);
+      }
+    }
+    // 36. 确定赋值断言
+    if (ts.isVariableDeclaration(node) && node.exclamationToken) add('noDefiniteAssignment', node);
+    // 37. globalThis
+    if (ts.isIdentifier(node) && node.text === 'globalThis') add('noGlobalThis', node);
+    // 38. 映射类型
+    if (ts.isMappedTypeNode(node)) add('noMappedTypes', node);
+    // 39. 嵌套函数声明
+    if (ts.isFunctionDeclaration(node)) {
+      let cur = node.parent;
+      let nested = false;
+      while (cur) {
+        if (ts.isFunctionDeclaration(cur) || ts.isFunctionExpression(cur) || ts.isArrowFunction(cur)) { nested = true; break; }
+        if (ts.isSourceFile(cur) || ts.isClassDeclaration(cur) || ts.isBlock(cur) && ts.isSourceFile(cur.parent)) break;
+        cur = cur.parent;
+      }
+      if (nested) add('noNestedFuncs', node);
+    }
+    // 40. 枚举成员非常量初始化
+    if (ts.isEnumMember(node) && node.initializer && !isConstantExpression(node.initializer)) {
+      add('noEnumMixedTypes', node);
+    }
+    // 41. for 循环外的逗号运算符
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.CommaToken) {
+      let cur = node.parent;
+      let inFor = false;
+      while (cur) {
+        if (ts.isForStatement(cur)) { inFor = true; break; }
+        if (ts.isStatement(cur) || ts.isSourceFile(cur)) break;
+        cur = cur.parent;
+      }
+      if (!inFor) add('noCommaOutsideLoops', node);
+    }
+    // 42. constructor 参数属性（public/private/protected/readonly 修饰的参数）
+    if (ts.isParameter(node) && node.modifiers && node.modifiers.length > 0) {
+      add('noCtorPropDecls', node);
+    }
+    // 43. 类表达式
+    if (ts.isClassExpression(node)) add('noClassLiterals', node);
+    // 44. import 断言
+    if (ts.isImportDeclaration(node) && (node.attributes || (node as unknown as { assertClause?: unknown }).assertClause)) {
+      add('noImportAssertions', node);
+    }
+    // 45. 调用签名 / 构造签名
+    if (ts.isCallSignatureDeclaration(node)) add('noCallSignatures', node);
+    if (ts.isConstructSignatureDeclaration(node) || ts.isConstructorTypeNode(node)) add('noCtorSignatures', node);
 
     ts.forEachChild(node, walk);
   }

@@ -86,7 +86,7 @@ arktsup check src/main/ets --fix
 
 ### 已覆盖规则
 
-共 27 条规则，全部对照官方文档逐条核验（来源与证据见 [docs/RULES.md](docs/RULES.md)），
+共 49 条规则，全部对照官方文档逐条核验（来源与证据见 [docs/RULES.md](docs/RULES.md)），
 并在 3327 个官方示例文件上验证过误报率（错误级误报 1/3327，为 NDK 互操作边界案例）。
 
 | 规则 | 级别 | 说明 |
@@ -117,6 +117,18 @@ arktsup check src/main/ets --fix
 | varDecl | error | 不支持 var（arkts-no-var） |
 | privateIdentifiers | error | 不支持 # 私有字段（arkts-no-private-identifiers） |
 | stdlibRestricted | error | 受限标准库 API：eval、Object.assign/freeze、hasOwnProperty 等（arkts-limited-stdlib） |
+| noFuncExpressions | error | 不支持函数表达式，用箭头函数（arkts-no-func-expressions） |
+| noGenerators | error | 不支持生成器函数（arkts-no-generators） |
+| noFuncApplyCall / noFuncBind | error/warning | 不支持 Function.apply/call/bind（recipe152/140） |
+| noDestructParams | error | 不支持参数解构（arkts-no-destruct-params） |
+| noTypingWithThis / noStandaloneThis | error | 不支持 this 类型标注与独立函数中的 this（recipe21/93） |
+| noPrototypeAssignment / noMethodReassignment | error | 不支持原型赋值与方法重赋值（recipe136/52） |
+| noNewTarget / noMultipleStaticBlocks | error | new.target 与多静态块（recipe132/16） |
+| noDefiniteAssignment | warning | 不支持确定赋值断言 x!: T（recipe134） |
+| noGlobalThis / noMappedTypes / noNestedFuncs | error | globalThis/映射类型/嵌套函数（recipe137/83/92） |
+| noEnumMixedTypes / noCommaOutsideLoops | error | 枚举运行时初始化/循环外逗号（recipe111/71） |
+| noCtorPropDecls / noClassLiterals | error | constructor 参数属性/类表达式（recipe25/50） |
+| noImportAssertions / noCallSignatures / noCtorSignatures | error | import 断言/调用签名/构造签名（recipe143/14/106） |
 
 **有意不做检查**（都有官方证据，详见 RULES.md）：Function 类型、元组类型、任意联合类型（如 string \| number）、字符串键属性名。
 

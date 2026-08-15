@@ -208,3 +208,62 @@ test('applyAutoFixes: angleCast <T>expr -> expr as T', () => {
   assert.match(res.text, /const b = \(a \+ b\) as Foo;/);
   assert.match(res.text, /const c = x as Bar;/);
 });
+
+// ---------- 新增规则（第二轮扩充，全部对照官方 recipe）----------
+
+test('noFuncExpressions / noGenerators', () => {
+  assert.equal(rulesOf('const f = function (s: string) { };', 'noFuncExpressions').length, 1);
+  assert.equal(rulesOf('const f = (s: string): void => { };', 'noFuncExpressions').length, 0);
+  assert.equal(rulesOf('function* gen() { yield 1; }', 'noGenerators').length, 1);
+});
+
+test('noFuncApplyCall / noFuncBind', () => {
+  assert.equal(rulesOf('fn.apply(this, args);', 'noFuncApplyCall').length, 1);
+  assert.equal(rulesOf('fn.call(this, 1);', 'noFuncApplyCall').length, 1);
+  assert.equal(rulesOf('const g = fn.bind(this);', 'noFuncBind').length, 1);
+});
+
+test('noDestructParams / noTypingWithThis', () => {
+  assert.equal(rulesOf('function f({ a, b }: P) { }', 'noDestructParams').length, 1);
+  assert.equal(rulesOf('interface I { getHead(): this }', 'noTypingWithThis').length, 1);
+});
+
+test('noStandaloneThis', () => {
+  assert.equal(rulesOf('function f() { this.x = 1; }', 'noStandaloneThis').length, 1);
+  assert.equal(rulesOf('class C { m() { this.x = 1; } }', 'noStandaloneThis').length, 0);
+  assert.equal(rulesOf('class C { static m() { this.x = 1; } }', 'noStandaloneThis').length, 1);
+});
+
+test('noPrototypeAssignment / noMethodReassignment', () => {
+  assert.equal(rulesOf('C.prototype = { };', 'noPrototypeAssignment').length, 1);
+  assert.equal(rulesOf('obj.method = () => { };', 'noMethodReassignment').length, 1);
+});
+
+test('noNewTarget / noMultipleStaticBlocks / noDefiniteAssignment', () => {
+  assert.equal(rulesOf('class E extends Error { constructor() { super(); new.target; } }', 'noNewTarget').length, 1);
+  assert.equal(rulesOf('class C { static { } static { } }', 'noMultipleStaticBlocks').length, 1);
+  const da = rulesOf('let x!: number;', 'noDefiniteAssignment');
+  assert.equal(da.length, 1);
+  assert.equal(da[0].severity, 'warning');
+});
+
+test('noGlobalThis / noMappedTypes / noNestedFuncs', () => {
+  assert.equal(rulesOf('globalThis.x = 1;', 'noGlobalThis').length, 1);
+  assert.equal(rulesOf('type T = { [K in keyof U]: boolean };', 'noMappedTypes').length, 1);
+  assert.equal(rulesOf('function a() { function b() { } }', 'noNestedFuncs').length, 1);
+});
+
+test('noEnumMixedTypes / noCommaOutsideLoops / noCtorPropDecls', () => {
+  assert.equal(rulesOf('enum E { A = Math.random() }', 'noEnumMixedTypes').length, 1);
+  assert.equal(rulesOf('const x = (1, 2);', 'noCommaOutsideLoops').length, 1);
+  assert.equal(rulesOf('for (let i = 0, j = 0; i < 1; i++, j++) { }', 'noCommaOutsideLoops').length, 0);
+  assert.equal(rulesOf('class P { constructor(private name: string) { } }', 'noCtorPropDecls').length, 1);
+});
+
+test('noClassLiterals / noImportAssertions / noCallSignatures / noCtorSignatures', () => {
+  assert.equal(rulesOf('const C = class { };', 'noClassLiterals').length, 1);
+  assert.equal(rulesOf('import { a } from "x" assert { type: "json" };', 'noImportAssertions').length, 1);
+  assert.equal(rulesOf('type F = { (arg: number): string };', 'noCallSignatures').length, 1);
+  assert.equal(rulesOf('type C = new (name: string) => P;', 'noCtorSignatures').length, 1);
+});
+
