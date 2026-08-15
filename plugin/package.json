@@ -1,0 +1,63 @@
+{
+  "name": "arktsup-vscode",
+  "displayName": "ArkTSUp — HarmonyOS ArkTS 提效工具",
+  "description": "ArkTS 检查(严格语法)与 JSON→类型 生成的 VS Code 插件，基于 arktsup CLI",
+  "version": "0.1.0",
+  "publisher": "yanceecha",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Linters",
+    "Other"
+  ],
+  "keywords": [
+    "arkts",
+    "harmonyos",
+    "鸿蒙",
+    "lint"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/*.ets",
+    "onCommand:arktsup.checkWorkspace",
+    "onCommand:arktsup.checkActiveFile",
+    "onCommand:arktsup.json2tsFromClipboard"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "arktsup.checkWorkspace",
+        "title": "ArkTSUp: 检查工程（ArkTS 严格语法）"
+      },
+      {
+        "command": "arktsup.checkActiveFile",
+        "title": "ArkTSUp: 检查当前文件"
+      },
+      {
+        "command": "arktsup.json2tsFromClipboard",
+        "title": "ArkTSUp: 从剪贴板 JSON 生成 ArkTS 类型"
+      }
+    ],
+    "configuration": {
+      "title": "ArkTSUp",
+      "properties": {
+        "arktsup.cliPath": {
+          "type": "string",
+          "default": "",
+          "description": "arktsup CLI 的绝对路径（默认自动查找项目内 dist/src/cli.js）"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p ./ && node scripts/copy-lib.js",
+    "package": "npm run build && npx --yes @vscode/vsce package --out arktsup-vscode.vsix"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.7.0"
+  }
+}
