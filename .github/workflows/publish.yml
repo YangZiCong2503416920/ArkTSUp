@@ -1,0 +1,26 @@
+name: Publish to npm (Trusted Publishing)
+
+# 触发: 推送 v* 版本标签（git tag v0.1.0 && git push origin v0.1.0）
+# 原理: GitHub OIDC -> npm 信任发布，无需令牌、无需 2FA
+# 前提: npmjs.com 上为 arktsup 配置 Trusted Publishing（关联本仓库与本 workflow）
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # 关键：OIDC 令牌
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org/
+      - run: npm ci
+      - run: npm test
+      # Trusted Publishing：npm 自动用 OIDC 换取发布令牌，无需 NODE_AUTH_TOKEN
+      - run: npm publish --provenance
