@@ -18,10 +18,11 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v5
+      # 注意: OIDC 专用 workflow 不要给 setup-node 配 registry-url，
+      # 否则会写入占位 _authToken 遮蔽 OIDC 交换，导致 404 (npm/cli#8730, actions/setup-node#1477)
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org/
       - run: npm ci
       - run: npm test
       - name: 检查版本是否已发布（幂等保护）
