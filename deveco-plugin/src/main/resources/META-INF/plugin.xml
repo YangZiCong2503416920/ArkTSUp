@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<idea-plugin>
+  <id>com.arktsup.deveco</id>
+  <name>ArkTSUp for DevEco Studio</name>
+  <vendor>Yanceecha</vendor>
+  <description><![CDATA[
+    HarmonyOS ArkTS 提效：调用 arktsup CLI 做严格语法检查，结果展示在工具窗口。
+    需要 Node.js 18+ 与 arktsup（npm i -g arktsup）。
+  ]]></description>
+  <depends>com.intellij.modules.platform</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <toolWindow id="ArkTSUp" anchor="bottom" factoryClass="com.arktsup.deveco.ArktsupToolWindowFactory"/>
+  </extensions>
+
+  <actions>
+    <action id="com.arktsup.deveco.CheckAction" class="com.arktsup.deveco.ArktsupCheckAction"
+            text="ArkTSUp: 检查工程（ArkTS 严格语法）" description="运行 arktsup check 并展示结果">
+      <add-to-group group-id="ToolsMenu" anchor="last"/>
+    </action>
+  </actions>
+</idea-plugin>
