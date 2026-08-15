@@ -60,6 +60,16 @@
 | tupleType（元组类型） | error | 官方示例（manager.ets）使用 `type TestList = [name: string, func: TestFunction][]` 并通过编译；recipe13 内容为空（规则已废弃） |
 | catchWithoutType（catch 无类型标注） | warning | 方向完全相反：recipe79 明确要求**省略** catch 类型标注 |
 
+## 配置忽略（.arktsuprc.json）
+
+在工程根目录放 `.arktsuprc.json` 可忽略指定规则与目录：
+
+```json
+{
+  "ignore": { "rules": ["propsByIndex"], "dirs": ["ohosTest"] }
+}
+```
+
 ## 明确不做检查的项（重要）
 
 | 写法 | 为什么不做 |

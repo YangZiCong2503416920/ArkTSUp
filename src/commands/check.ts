@@ -14,6 +14,7 @@
 import * as path from 'node:path';
 import * as fs from 'node:fs';
 import { scanSource, applyAutoFixes, DEFAULT_SKIP, ScanReport, Severity, Finding } from '../lib/arkts-check';
+import { loadConfig, isRuleIgnored } from '../lib/config';
 
 const SEV_COLOR: Record<string, string> = {
   error: '\x1b[31m',   // red
@@ -66,6 +67,7 @@ export function runCheck(argv: string[]): number {
     return 2;
   }
   const isFile = fs.statSync(abs).isFile();
+  const config = loadConfig(isFile ? path.dirname(abs) : abs);
 
   let report: ScanReport;
   let totalFixed = 0;
@@ -98,7 +100,7 @@ export function runCheck(argv: string[]): number {
     };
   } else {
     const { collectEtsFiles } = require('../lib/arkts-check') as typeof import('../lib/arkts-check');
-    const skip = extraSkip.length ? new Set([...DEFAULT_SKIP, ...extraSkip]) : undefined;
+    const skip = new Set([...DEFAULT_SKIP, ...extraSkip, ...(config.ignore?.dirs ?? [])]);
     const files = collectEtsFiles(abs, skip);
     const findings: Finding[] = [];
     for (const f of files) {
@@ -116,6 +118,12 @@ export function runCheck(argv: string[]): number {
       infos: findings.filter((f) => f.severity === 'info').length,
     };
   }
+  // 应用 .arktsuprc 的规则忽略
+  report.findings = report.findings.filter((f) => !isRuleIgnored(config, f.rule));
+  report.errors = report.findings.filter((f) => f.severity === 'error').length;
+  report.warnings = report.findings.filter((f) => f.severity === 'warning').length;
+  report.infos = report.findings.filter((f) => f.severity === 'info').length;
+
   if (totalFixed > 0) {
     process.stdout.write(`已自动修复 ${totalFixed} 处：any/unknown -> Object、var -> let（any 部分请再手动改为具体类型）\n`);
   }

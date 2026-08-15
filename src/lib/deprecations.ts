@@ -113,6 +113,66 @@ export const DEPRECATIONS: Deprecation[] = [
   // ---------- Telephony Kit ----------
   { module: '@ohos.telephony.sim', kit: '@kit.TelephonyKit', doc: 'apis-telephony-kit/js-apis-sim.md' },
   { module: '@ohos.telephony.sms', kit: '@kit.TelephonyKit', doc: 'apis-telephony-kit/js-apis-sms.md' },
+  // ---------- 扩充批次（2026-08-15，全部对照官方文档提取）----------
+
+  // Performance Analysis Kit
+  { module: '@ohos.faultLogger', kit: '@kit.PerformanceAnalysisKit', doc: 'apis-performance-analysis-kit/js-apis-faultLogger.md' },
+  { module: '@ohos.hichecker', kit: '@kit.PerformanceAnalysisKit', doc: 'apis-performance-analysis-kit/js-apis-hichecker.md' },
+  { module: '@ohos.hitracechain', kit: '@kit.PerformanceAnalysisKit', doc: 'apis-performance-analysis-kit/js-apis-hitracechain.md' },
+  { module: '@ohos.hitracemeter', kit: '@kit.PerformanceAnalysisKit', doc: 'apis-performance-analysis-kit/js-apis-hitracemeter.md' },
+
+  // Network Kit
+  { module: '@ohos.net.ethernet', kit: '@kit.NetworkKit', doc: 'apis-network-kit/js-apis-net-ethernet.md' },
+  { module: '@ohos.net.mdns', kit: '@kit.NetworkKit', doc: 'apis-network-kit/js-apis-net-mdns.md' },
+  { module: '@ohos.net.policy', kit: '@kit.NetworkKit', doc: 'apis-network-kit/js-apis-net-policy.md' },
+  { module: '@ohos.net.vpn', kit: '@kit.NetworkKit', doc: 'apis-network-kit/js-apis-net-vpn.md' },
+  { module: '@ohos.networkSecurity', kit: '@kit.NetworkKit', doc: 'apis-network-kit/js-apis-networkSecurity.md' },
+
+  // ArkData
+  { module: '@ohos.data.dataSharePredicates', kit: '@kit.ArkData', doc: 'apis-arkdata/js-apis-data-dataSharePredicates.md' },
+  { module: '@ohos.data.distributedobject', kit: '@kit.ArkData', names: { distributedDataObject: 'distributedDataObject' }, doc: 'apis-arkdata/js-apis-data-distributedobject.md' },
+  { module: '@ohos.data.commonType', kit: '@kit.ArkData', doc: 'apis-arkdata/js-apis-data-commonType.md' },
+
+  // Ability Kit
+  { module: '@ohos.app.ability.dataUriUtils', kit: '@kit.AbilityKit', doc: 'apis-ability-kit/js-apis-app-ability-dataUriUtils.md' },
+  { module: '@ohos.app.ability.errorManager', kit: '@kit.AbilityKit', doc: 'apis-ability-kit/js-apis-app-ability-errorManager.md' },
+  { module: '@ohos.app.ability.appRecovery', kit: '@kit.AbilityKit', doc: 'apis-ability-kit/js-apis-app-ability-appRecovery.md' },
+  { module: '@ohos.app.ability.autoFillManager', kit: '@kit.AbilityKit', doc: 'apis-ability-kit/js-apis-app-ability-autoFillManager.md' },
+  { module: '@ohos.app.ability.continueManager', kit: '@kit.AbilityKit', doc: 'apis-ability-kit/js-apis-app-ability-continueManager.md' },
+
+  // Core File Kit
+  { module: '@ohos.file.environment', kit: '@kit.CoreFileKit', doc: 'apis-core-file-kit/js-apis-file-environment.md' },
+  { module: '@ohos.file.hash', kit: '@kit.CoreFileKit', doc: 'apis-core-file-kit/js-apis-file-hash.md' },
+  { module: '@ohos.file.securityLabel', kit: '@kit.CoreFileKit', doc: 'apis-core-file-kit/js-apis-file-securityLabel.md' },
+  { module: '@ohos.fileShare', kit: '@kit.CoreFileKit', doc: 'apis-core-file-kit/js-apis-fileShare.md' },
+
+  // ArkTS
+  { module: '@ohos.convertxml', kit: '@kit.ArkTS', doc: 'apis-arkts/js-apis-convertxml.md' },
+  { module: '@ohos.xml', kit: '@kit.ArkTS', doc: 'apis-arkts/js-apis-xml.md' },
+  { module: '@ohos.fastbuffer', kit: '@kit.ArkTS', doc: 'apis-arkts/js-apis-fastbuffer.md' },
+
+  // Telephony Kit
+  { module: '@ohos.telephony.radio', kit: '@kit.TelephonyKit', doc: 'apis-telephony-kit/js-apis-radio.md' },
+  { module: '@ohos.telephony.observer', kit: '@kit.TelephonyKit', doc: 'apis-telephony-kit/js-apis-observer.md' },
+  { module: '@ohos.telephony.call', kit: '@kit.TelephonyKit', doc: 'apis-telephony-kit/js-apis-call.md' },
+  { module: '@ohos.telephony.vcard', kit: '@kit.TelephonyKit', doc: 'apis-telephony-kit/js-apis-vcard.md' },
+
+  // ArkUI
+  { module: '@ohos.screenshot', kit: '@kit.ArkUI', doc: 'apis-arkui/js-apis-screenshot.md' },
+  { module: '@ohos.measure', kit: '@kit.ArkUI', doc: 'apis-arkui/js-apis-measure.md' },
+  { module: '@ohos.uiappearance', kit: '@kit.ArkUI', doc: 'apis-arkui/js-apis-uiappearance.md' },
+  { module: '@ohos.arkui.nodeController', kit: '@kit.ArkUI', doc: 'apis-arkui/js-apis-arkui-nodeController.md' },
+
+  // Basic Services Kit
+  { module: '@ohos.print', kit: '@kit.BasicServicesKit', doc: 'apis-basic-services-kit/js-apis-print.md' },
+  { module: '@ohos.scan', kit: '@kit.BasicServicesKit', doc: 'apis-basic-services-kit/js-apis-scan.md' },
+  { module: '@ohos.osAccount', kit: '@kit.BasicServicesKit', doc: 'apis-basic-services-kit/js-apis-osAccount.md' },
+  { module: '@ohos.appAccount', kit: '@kit.BasicServicesKit', doc: 'apis-basic-services-kit/js-apis-appAccount.md' },
+  { module: '@ohos.wallpaper', kit: '@kit.BasicServicesKit', doc: 'apis-basic-services-kit/js-apis-wallpaper.md' },
+  { module: '@ohos.serialManager', kit: '@kit.BasicServicesKit', doc: 'apis-basic-services-kit/js-apis-serialManager.md' },
+
+  // Localization Kit
+  { module: '@ohos.rawFileDescriptor', kit: '@kit.LocalizationKit', doc: 'apis-localization-kit/js-apis-rawFileDescriptor.md' },
 ];
 
 const BY_MODULE = new Map<string, Deprecation>();
