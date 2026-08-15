@@ -86,7 +86,7 @@ arktsup check src/main/ets --fix
 
 ### 已覆盖规则
 
-共 61 条规则，全部对照官方文档逐条核验（来源与证据见 [docs/RULES.md](docs/RULES.md)），
+共 65 条规则，全部对照官方文档逐条核验（来源与证据见 [docs/RULES.md](docs/RULES.md)），
 并在 3327 个官方示例文件上验证过误报率（错误级误报 1/3327，为 NDK 互操作边界案例）。
 
 | 规则 | 级别 | 说明 |
@@ -133,6 +133,8 @@ arktsup check src/main/ets --fix
 | noNsStatements / noGenericLambdas / noIs | error | 命名空间语句/泛型箭头/is 守卫（recipe116/49/96） |
 | noAliasesByIndex / noImportDefaultAs / noModuleWildcards / noAmbientDecls | error | 索引类型/import default as/通配模块/ambient（recipe28/120/129/128） |
 | noMisplacedImports / noLimitedThrow | error | import 位置/throw 限制（recipe150/87） |
+| noDeclMerging / noEnumMerging / uniqueNames | error | 声明合并/枚举合并/类型名唯一（recipe103/113/4） |
+| noLimitedESObject | warning | ESObject 使用受限（recipe151） |
 
 **有意不做检查**（都有官方证据，详见 RULES.md）：Function 类型、元组类型、任意联合类型（如 string \| number）、字符串键属性名。
 

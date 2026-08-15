@@ -80,6 +80,11 @@
 | noAmbientDecls | arkts-no-ambient-decls | error | recipe128 |
 | noMisplacedImports | arkts-no-misplaced-imports | error | recipe150 |
 | noLimitedThrow | arkts-limited-throw | error | recipe87 |
+| noDeclMerging | arkts-no-decl-merging | error | recipe103（同文件 class+interface 同名） |
+| noEnumMerging | arkts-no-enum-merging | error | recipe113（同文件重复 enum） |
+| uniqueNames | arkts-unique-names | error | recipe4（类型名唯一；**不查变量/函数名**——ArkTS struct 关键字会让 TS 解析器产生错误恢复 AST，变量级检查会误报） |
+| noLimitedESObject | arkts-limited-esobj | warning | recipe151 |
+| （未实现）structural typing / decl merging 跨文件 / extends-only-class 等 | - | - | 需要完整类型检查器（TypeChecker），超出纯 AST 扫描范围，见 recipe 列表 |
 
 > propsByIndex 降级为 **warning** 的原因：recipe29 明确豁免 Record / Map / 枚举 / 类型化数组的索引访问，
 > 而静态检测无法分辨索引对象的类型。warning 不阻塞 CI，仅提示人工确认。

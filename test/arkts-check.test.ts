@@ -307,3 +307,21 @@ test('noMisplacedImports: import 必须在其他语句之前', () => {
   assert.equal(f.length, 1);
 });
 
+// ---------- 第四轮扩充（4 条）----------
+
+test('noDeclMerging / noEnumMerging / uniqueNames', () => {
+  const dm = 'interface C { a: number }\nclass C { b: number = 0 }';
+  assert.equal(rulesOf(dm, 'noDeclMerging').length, 1);
+  assert.equal(rulesOf('enum E { A }\nenum E { B }', 'noEnumMerging').length, 1);
+  assert.equal(rulesOf('type X = number;\nclass X { }', 'uniqueNames').length, 1);
+  assert.equal(rulesOf('class Y { }\nclass Z { }', 'uniqueNames').length, 0);
+  // struct 场景不误报（TS 解析器错误恢复，变量级不检查）
+  assert.equal(rulesOf('@Entry\n@Component\nstruct P { build() { const token = 1; } }', 'uniqueNames').length, 0);
+});
+
+test('noLimitedESObject', () => {
+  const f = rulesOf('let o: ESObject = foo();', 'noLimitedESObject');
+  assert.equal(f.length, 1);
+  assert.equal(f[0].severity, 'warning');
+});
+

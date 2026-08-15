@@ -384,6 +384,26 @@ const RULE_INFO: Record<string, RuleMeta> = {
     message: 'ArkTS 只允许 throw Error 及其子类（arkts-limited-throw）',
     fix: 'throw new Error(...) 或自定义 Error 子类',
   },
+  noDeclMerging: {
+    severity: 'error',
+    message: 'ArkTS 不支持声明合并（arkts-no-decl-merging）',
+    fix: '把类/接口定义保持在一个紧凑的声明中',
+  },
+  noEnumMerging: {
+    severity: 'error',
+    message: 'ArkTS 不支持 enum 声明合并（arkts-no-enum-merging）',
+    fix: '每个枚举只声明一次',
+  },
+  uniqueNames: {
+    severity: 'error',
+    message: '类型/命名空间名称必须唯一（arkts-unique-names）',
+    fix: '重命名冲突的声明',
+  },
+  noLimitedESObject: {
+    severity: 'warning',
+    message: 'ESObject 类型使用受限（arkts-limited-esobj）',
+    fix: '改用具体类型（仅互操作局部变量场景允许 ESObject）',
+  },
 };
 
 function snippetOf(sourceFile: ts.SourceFile, node: ts.Node): string {
@@ -577,6 +597,35 @@ export function scanSource(file: string, sourceText: string, minSeverity: Severi
         if (seenNonImport) add('noMisplacedImports', stmt);
       } else {
         seenNonImport = true;
+      }
+    }
+  }
+
+  /** 类型/命名空间/变量/函数名称唯一性（文件级） */
+  function checkNameUniqueness(): void {
+    const seen = new Map<string, { kind: string; node: ts.Node }>();
+    for (const stmt of sf.statements) {
+      let name: string | undefined;
+      let kind = '';
+      if (ts.isClassDeclaration(stmt) && stmt.name) { name = stmt.name.text; kind = 'class'; }
+      else if (ts.isInterfaceDeclaration(stmt) && stmt.name) { name = stmt.name.text; kind = 'interface'; }
+      else if (ts.isEnumDeclaration(stmt) && stmt.name) { name = stmt.name.text; kind = 'enum'; }
+      else if (ts.isTypeAliasDeclaration(stmt) && stmt.name) { name = stmt.name.text; kind = 'type'; }
+      else if (ts.isModuleDeclaration(stmt) && stmt.name && ts.isIdentifier(stmt.name)) { name = stmt.name.text; kind = 'namespace'; }
+      // 注意：不检查变量/函数名——ArkTS 的 struct 关键字会让 TS 解析器产生
+      // 错误恢复 AST（类体被拆成顶层 Block/ExpressionStatement），变量级检查会误报
+      if (name) {
+        const prev = seen.get(name);
+        if (prev) {
+          if (prev.kind === 'enum' && kind === 'enum') add('noEnumMerging', stmt);
+          else if ((prev.kind === 'class' && kind === 'interface') || (prev.kind === 'interface' && kind === 'class')) {
+            add('noDeclMerging', stmt);
+          } else {
+            add('uniqueNames', stmt);
+          }
+        } else {
+          seen.set(name, { kind, node: stmt });
+        }
       }
     }
   }
@@ -878,11 +927,17 @@ export function scanSource(file: string, sourceText: string, minSeverity: Severi
       if (bad) add('noLimitedThrow', node);
     }
 
+    // 56. ESObject 类型（受限）
+    if (ts.isTypeReferenceNode(node) && node.typeName.getText(sf) === 'ESObject') {
+      add('noLimitedESObject', node);
+    }
+
     ts.forEachChild(node, walk);
   }
 
   checkTsSuppress();
   checkMisplacedImports();
+  checkNameUniqueness();
   walk(sf);
   return findings;
 }
