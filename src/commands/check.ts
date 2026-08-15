@@ -13,7 +13,7 @@
 
 import * as path from 'node:path';
 import * as fs from 'node:fs';
-import { scanSource, fixAnyInSource, DEFAULT_SKIP, ScanReport, Severity, Finding } from '../lib/arkts-check';
+import { scanSource, applyAutoFixes, DEFAULT_SKIP, ScanReport, Severity, Finding } from '../lib/arkts-check';
 
 const SEV_COLOR: Record<string, string> = {
   error: '\x1b[31m',   // red
@@ -72,10 +72,10 @@ export function runCheck(argv: string[]): number {
   const processFileContent = (file: string, text: string): Finding[] => {
     let src = text;
     if (fix) {
-      const res = fixAnyInSource(src);
-      if (res.fixed > 0) {
+      const res = applyAutoFixes(src);
+      if (res.total > 0) {
         fs.writeFileSync(file, res.text);
-        totalFixed += res.fixed;
+        totalFixed += res.total;
         src = res.text;
       }
     }
@@ -117,7 +117,7 @@ export function runCheck(argv: string[]): number {
     };
   }
   if (totalFixed > 0) {
-    process.stdout.write(`已自动修复 ${totalFixed} 处 any/unknown -> Object（请再手动改为具体类型）\n`);
+    process.stdout.write(`已自动修复 ${totalFixed} 处：any/unknown -> Object、var -> let（any 部分请再手动改为具体类型）\n`);
   }
 
   if (format === 'json') {

@@ -17,6 +17,7 @@
  */
 
 import * as fs from 'node:fs';
+import JSON5 from 'json5';
 import { jsonToArkTs, Json2TsOptions } from '../lib/json2ts';
 
 export function runJson2Ts(argv: string[]): number {
@@ -81,13 +82,22 @@ export function runJson2Ts(argv: string[]): number {
     options.rootName = options.rootName ?? 'Root';
   }
 
-  // 解析 JSON
+  // 解析 JSON（自动降级 JSON5：支持注释、尾逗号、单引号、无引号键）
   let data: unknown;
+  let usedJson5 = false;
   try {
     data = JSON.parse(raw);
-  } catch (e) {
-    console.error(`错误: JSON 解析失败 — ${(e as Error).message}`);
-    return 2;
+  } catch {
+    try {
+      data = JSON5.parse(raw);
+      usedJson5 = true;
+    } catch (e) {
+      console.error(`错误: JSON/JSON5 解析失败 — ${(e as Error).message}`);
+      return 2;
+    }
+  }
+  if (usedJson5) {
+    console.error('提示: 输入包含 JSON5 语法（注释/尾逗号/单引号等），已按 JSON5 解析');
   }
 
   const result = jsonToArkTs(data, options);
@@ -123,4 +133,6 @@ const HELP = `arktsup json2ts — 把 JSON 转成符合 ArkTS 限制的类型声
   --max-depth <n>    最大嵌套深度（默认 20）
   --out <file>       输出到文件（默认打印到 stdout）
   -h, --help         显示帮助
+
+说明: 输入自动兼容 JSON5（注释、尾逗号、单引号、无引号键），无需额外开关。
 `;

@@ -59,6 +59,7 @@ arktsup json2ts data.json --style class --sort --optional
 
 ### 特性
 
+- **输入兼容 JSON5**：支持注释、尾逗号、单引号、无引号键（自动检测，无需开关）
 - **数组单数化命名**：addresses: Address[]、orders: Order[]
 - **对象数组合并键**：数组元素缺少的键自动标记可选（key?: T）
 - **null 处理**：字段值为 null 时生成 T | null（ArkTS 允许）；纯 null 字段标记 ?:
@@ -77,7 +78,7 @@ arktsup check src/entry/Index.ets
 arktsup check src/main/ets --format json
 arktsup check src/main/ets --min-severity error
 
-# 自动修复：把 any/unknown 替换为 Object（ArkTS 迁移第一步，需再手动收窄为具体类型）
+# 自动修复：any/unknown -> Object、var -> let（any 部分需再手动收窄为具体类型）
 arktsup check src/main/ets --fix
 ```
 
@@ -134,6 +135,9 @@ arktsup template model User --fields "id:number" --style class
 
 # 生成 @Observed 状态类（字段自动带初值，满足 strictPropertyInitialization）
 arktsup template state CartState --fields "items:number,totalPrice:number"
+
+# 生成 @CustomDialog 弹窗（含 controller/回调骨架）
+arktsup template dialog ConfirmDialog
 
 # 扫描页面目录生成路由常量表（自动识别 @Entry struct）
 arktsup template route-list --dir entry/src/main/ets/pages

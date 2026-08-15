@@ -590,3 +590,39 @@ export function fixAnyInSource(sourceText: string): { text: string; fixed: numbe
   }
   return { text, fixed };
 }
+
+/**
+ * 自动修复集合：目前支持
+ *  1. any/unknown -> Object（arkts-no-any-unknown）
+ *  2. var -> let（arkts-no-var）
+ * 全部基于 AST 精确替换，不影响字符串/注释。
+ */
+export interface FixSummary {
+  text: string;
+  total: number;
+  /** 各类修复的计数，如 { noAny: 3, varDecl: 2 } */
+  byRule: Record<string, number>;
+}
+
+export function applyAutoFixes(sourceText: string): FixSummary {
+  const anyRes = fixAnyInSource(sourceText);
+  const byRule: Record<string, number> = { noAny: anyRes.fixed };
+  const sf = ts.createSourceFile('fix.ets', anyRes.text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const varPositions: { start: number; end: number }[] = [];
+  function walk(n: ts.Node): void {
+    if (ts.isVariableDeclarationList(n) && !(n.flags & ts.NodeFlags.BlockScoped)) {
+      varPositions.push({ start: n.getStart(sf), end: n.getStart(sf) + 3 });
+    }
+    ts.forEachChild(n, walk);
+  }
+  walk(sf);
+  let text = anyRes.text;
+  let fixed = 0;
+  for (const { start, end } of varPositions.sort((a, b) => b.start - a.start)) {
+    if (text.slice(start, end) !== 'var') continue;
+    text = text.slice(0, start) + 'let' + text.slice(end);
+    fixed++;
+  }
+  byRule.varDecl = fixed;
+  return { text, total: anyRes.fixed + fixed, byRule };
+}

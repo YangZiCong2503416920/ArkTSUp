@@ -120,3 +120,24 @@ test('根为原始值', () => {
   const r = jsonToArkTs('hello', { rootName: 'Msg' });
   assert.equal(r.code, 'export type Msg = string\n');
 });
+
+test('CLI: json2ts 接受 JSON5（注释/尾逗号/单引号）', () => {
+  const { execSync } = require('node:child_process');
+  const json5 = [
+    "// 这是注释",
+    "{",
+    "  id: 1,        // 无引号键",
+    "  name: 'Alice',",
+    "  tags: ['a', 'b',],   // 尾逗号",
+    "}",
+  ].join('\n');
+  const out = execSync('node dist/src/cli.js json2ts --name J5', {
+    cwd: '/home/yangzicong/projects/ArkTSUp',
+    input: json5,
+    encoding: 'utf8',
+  });
+  assert.match(out, /export interface J5/);
+  assert.match(out, /id: number/);
+  assert.match(out, /name: string/);
+  assert.match(out, /tags: string\[\]/);
+});

@@ -43,6 +43,7 @@
     "url": "https://github.com/YangZiCong2503416920/ArkTSUp/issues"
   },
   "dependencies": {
+    "json5": "^2.2.3",
     "typescript": "^5.7.0"
   }
 }

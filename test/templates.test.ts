@@ -90,3 +90,13 @@ test('非法类型名/字段名报错', () => {
   assert.throws(() => renderTemplate('model', { name: 'User', fields: parseFields('first name:string') }), /合法标识符/);
 });
 
+test('dialog 模板生成 @CustomDialog 且字段类型合规', () => {
+  const r = renderTemplate('dialog', { name: 'ConfirmDialog' });
+  assert.match(r.code, /@CustomDialog/);
+  assert.match(r.code, /export struct ConfirmDialog/);
+  assert.match(r.code, /controller: CustomDialogController;/);
+  assert.match(r.code, /@Prop message: string/);
+  const { scanSource } = require('../src/lib/arkts-check') as typeof import('../src/lib/arkts-check');
+  const findings = scanSource('gen.ets', r.code);
+  assert.deepEqual(findings, [], 'dialog 模板应通过自身 check');
+});

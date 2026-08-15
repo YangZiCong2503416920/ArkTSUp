@@ -176,3 +176,21 @@ const e = (1 as any);
   assert.match(text, /const d: Array<Object> = \[\]/);
   assert.match(text, /const e = \(1 as Object\);/);
 });
+
+test('applyAutoFixes: any/unknown->Object 且 var->let', () => {
+  const { applyAutoFixes } = require('../src/lib/arkts-check') as typeof import('../src/lib/arkts-check');
+  const src = [
+    'var x: any = 1;',
+    'let y: unknown = 2;',
+    'for (var i = 0; i < 3; i++) { }',
+    'const s = "var is just text";',
+  ].join('\n');
+  const res = applyAutoFixes(src);
+  assert.equal(res.byRule.noAny, 2);
+  assert.equal(res.byRule.varDecl, 2);
+  assert.match(res.text, /let x: Object = 1;/);
+  assert.match(res.text, /let y: Object = 2;/);
+  assert.match(res.text, /for \(let i = 0;/);
+  assert.match(res.text, /"var is just text"/);
+  assert.ok(!res.text.includes('var x'));
+});

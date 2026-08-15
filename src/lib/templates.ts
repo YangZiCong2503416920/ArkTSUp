@@ -5,7 +5,7 @@
  * 所有模板遵守 ArkTS 限制：无 any、无对象字面量无类型、类字段有初值（strictPropertyInitialization）。
  */
 
-export type TemplateType = 'page' | 'component' | 'model' | 'state' | 'route-list';
+export type TemplateType = 'page' | 'component' | 'dialog' | 'model' | 'state' | 'route-list';
 
 export interface FieldSpec {
   name: string;
@@ -85,6 +85,11 @@ export function renderTemplate(type: TemplateType, opts: TemplateOptions): Templ
         fileName: name + '.ets',
         code: componentTemplate(name),
       };
+    case 'dialog':
+      return {
+        fileName: name + '.ets',
+        code: dialogTemplate(name),
+      };
     case 'model':
       return {
         fileName: name + '.ets',
@@ -150,6 +155,42 @@ function componentTemplate(name: string): string {
     '        })',
     '    }',
     '    .padding(16)',
+    '  }',
+    '}',
+    '',
+  ].join('\n');
+}
+
+function dialogTemplate(name: string): string {
+  return [
+    '@CustomDialog',
+    'export struct ' + name + ' {',
+    '  controller: CustomDialogController;',
+    "  @Prop message: string = '';",
+    "  @Prop onConfirm: (() => void) | null = null;",
+    '',
+    '  build() {',
+    '    Column({ space: 16 }) {',
+    '      Text(this.message)',
+    '        .fontSize(18)',
+    '        .fontWeight(FontWeight.Medium)',
+    '        .textAlign(TextAlign.Center)',
+    '',
+    '      Row({ space: 16 }) {',
+    "        Button('取消')",
+    '          .backgroundColor(Color.Gray)',
+    '          .onClick(() => {',
+    '            this.controller.close();',
+    '          })',
+    '',
+    "        Button('确定')",
+    '          .onClick(() => {',
+    '            this.onConfirm?.();',
+    '            this.controller.close();',
+    '          })',
+    '      }',
+    '    }',
+    '    .padding(24)',
     '  }',
     '}',
     '',

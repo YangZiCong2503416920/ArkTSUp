@@ -31,3 +31,30 @@ npm install
 npm run build      # 编译 + 复制 arktsup lib
 npm run package    # 产出 .vsix
 ```
+
+## 使用示例
+
+打开命令面板：**Ctrl+Shift+P**（macOS: Cmd+Shift+P），输入以下任一命令：
+
+| 命令 | 输入 | 效果 |
+| --- | --- | --- |
+| 检查工程 | `ArkTSUp: 检查工程` | 扫描工作区，问题进 Problems 面板 |
+| 检查当前文件 | `ArkTSUp: 检查当前文件` | 只扫当前 .ets |
+| 生成类型 | `ArkTSUp: 从剪贴板 JSON 生成 ArkTS 类型` | 复制接口 JSON → 输入类型名 → 新文档生成 |
+| 迁移 API | `ArkTSUp: 迁移废弃 API` | 报告 @ohos.* 数量 → 一键应用修复 |
+| 查资源 | `ArkTSUp: 检查资源引用` | 缺失/未用资源诊断 |
+
+**保存自动检查**：打开任意 .ets 保存，500ms 后自动出诊断（可 `arktsup.checkOnSave` 关闭）。
+
+## 常见问题
+
+- **找不到 arktsup CLI**：设置 `arktsup.cliPath` 指向 cli.js；或在工程里 `npm i -D arktsup`（推荐，插件会自动发现）
+- **检查结果没刷新**：确认保存的是 .ets 文件；检查 Problems 面板右下角过滤
+- **json2ts 不可用**：该命令需要工程内安装 arktsup 包
+
+## 界面截图
+
+> 待补充：装好插件后在鸿蒙工程上执行检查，把截图放到本目录（`docs/screenshots/*.png`）并在此插入。
+> 可参考输出样式：
+> - Problems 面板：`[noAny] ArkTS 禁止使用 any 类型 ...`（可点击跳转到对应行）
+> - 状态栏/通知：`ArkTSUp 检查完成: 2 错误，1 警告`

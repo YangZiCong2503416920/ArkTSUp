@@ -55,8 +55,8 @@ export function runTemplate(argv: string[]): number {
   const type = positional[0] as TemplateType | undefined;
   const name = positional[1];
 
-  if (!type || !['page', 'component', 'model', 'state', 'route-list'].includes(type)) {
-    console.error('错误: 请指定模板类型 page | component | model | state | route-list');
+  if (!type || !['page', 'component', 'dialog', 'model', 'state', 'route-list'].includes(type)) {
+    console.error('错误: 请指定模板类型 page | component | dialog | model | state | route-list');
     console.log(HELP);
     return 2;
   }
@@ -124,6 +124,7 @@ const HELP = `arktsup template — 样板代码生成器
 用法:
   arktsup template page <Name>            生成 @Entry 页面
   arktsup template component <Name>       生成可复用组件（@Prop/@State）
+  arktsup template dialog <Name>          生成 @CustomDialog 弹窗
   arktsup template model <Name> --fields "id:number,name:string"
                                          生成数据模型（interface/class）
   arktsup template state <Name> --fields "count:number,userName:string"
