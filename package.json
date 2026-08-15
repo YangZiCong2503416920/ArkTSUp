@@ -8,13 +8,16 @@
   },
   "main": "dist/src/index.js",
   "files": [
-    "dist",
-    "README.md"
+    "dist/src",
+    "README.md",
+    "docs",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node --test dist/test/*.test.js",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "prepublishOnly": "npm test"
   },
   "engines": {
     "node": ">=18"
@@ -24,10 +27,20 @@
     "harmonyos",
     "鸿蒙",
     "json2ts",
-    "cli"
+    "cli",
+    "developer-tools",
+    "code-quality"
   ],
   "devDependencies": {
     "@types/node": "^22.10.0",
     "typescript": "^5.7.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YangZiCong2503416920/ArkTSUp.git"
+  },
+  "homepage": "https://github.com/YangZiCong2503416920/ArkTSUp",
+  "bugs": {
+    "url": "https://github.com/YangZiCong2503416920/ArkTSUp/issues"
   }
 }
