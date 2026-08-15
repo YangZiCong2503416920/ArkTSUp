@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import * as path from 'node:path';
 import { jsonToArkTs } from '../src/lib/json2ts';
 
 test('基本对象生成 interface', () => {
@@ -132,7 +133,7 @@ test('CLI: json2ts 接受 JSON5（注释/尾逗号/单引号）', () => {
     "}",
   ].join('\n');
   const out = execSync('node dist/src/cli.js json2ts --name J5', {
-    cwd: '/home/yangzicong/projects/ArkTSUp',
+    cwd: path.join(__dirname, '..', '..'),
     input: json5,
     encoding: 'utf8',
   });
