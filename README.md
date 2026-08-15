@@ -2,7 +2,8 @@
 
 > A CLI toolkit for HarmonyOS ArkTS developers: JSON → ArkTS type generation, and strict-syntax checking against official ArkTS rules.
 
-[![CI](https://github.com/YangZiCong2503416920/ArkTSUp/actions/workflows/ci.yml/badge.svg)](https://github.com/YangZiCong2503416920/ArkTSUp/actions) <!-- 创建仓库后把 YangZiCong2503416920 换成你的 GitHub 用户名 -->
+[![CI](https://github.com/YangZiCong2503416920/ArkTSUp/actions/workflows/ci.yml/badge.svg)](https://github.com/YangZiCong2503416920/ArkTSUp/actions)
+[![npm](https://img.shields.io/npm/v/arktsup)](https://www.npmjs.com/package/arktsup) <!-- 创建仓库后把 YangZiCong2503416920 换成你的 GitHub 用户名 -->
 
 面向鸿蒙（HarmonyOS）ArkTS 开发者的痛点解决方案集合。全部工具为本地 CLI，不依赖 DevEco Studio，可直接对工程文件做转换、扫描、修复。生成/修复的结果严格贴合 ArkTS 语法限制（无 any、无任意联合、对象字面量必须显式声明类型等）。
 
