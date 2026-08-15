@@ -18,10 +18,15 @@
 ## 安装
 
 ```bash
-# 克隆后在项目根目录
-npm install
-npm run build
-npm link          # 全局可用 arktsup 命令（或直接 node dist/src/cli.js ...）
+# 方式一：直接从 npm 安装（推荐）
+npm install -g arktsup        # 全局使用
+npx arktsup --version         # 或临时使用
+
+# 方式二：源码构建
+git clone https://github.com/YangZiCong2503416920/ArkTSUp.git
+cd ArkTSUp
+npm install && npm run build
+npm link                      # 全局可用 arktsup
 ```
 
 要求 Node.js >= 18。
