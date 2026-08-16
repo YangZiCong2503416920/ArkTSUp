@@ -2,6 +2,12 @@
 
 本文件记录 ArkTSUp for VS Code 插件的版本变更（Marketplace 展示用）。
 
+## 0.2.1 — 2026-08-16
+
+- **正式上架 VS Code Marketplace（首个发布版本）**
+- 打包自包含运行时依赖（typescript/json5 随包分发，离线可用）
+- 修复 CLI 版本读取：VSIX 布局下 --version 正确显示 0.2.1
+
 ## 0.2.0 — 2026-08-16
 
 - **首次上架 VS Code Marketplace**
