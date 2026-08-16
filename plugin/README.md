@@ -1,5 +1,11 @@
 # ArkTSUp for VS Code
 
+[![Marketplace version](https://img.shields.io/visual-studio-marketplace/v/yanceecha.arktsup-vscode)](https://marketplace.visualstudio.com/items?itemName=yanceecha.arktsup-vscode)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/yanceecha.arktsup-vscode)](https://marketplace.visualstudio.com/items?itemName=yanceecha.arktsup-vscode)
+[![Downloads](https://img.shields.io/visual-studio-marketplace/d/yanceecha.arktsup-vscode)](https://marketplace.visualstudio.com/items?itemName=yanceecha.arktsup-vscode)
+[![Rating](https://img.shields.io/visual-studio-marketplace/r/yanceecha.arktsup-vscode)](https://marketplace.visualstudio.com/items?itemName=yanceecha.arktsup-vscode)
+[![CI](https://github.com/YangZiCong2503416920/ArkTSUp/actions/workflows/ci.yml/badge.svg)](https://github.com/YangZiCong2503416920/ArkTSUp/actions)
+
 [ArkTSUp](https://github.com/YangZiCong2503416920/ArkTSUp) 的 VS Code 插件：在编辑器里直接做 ArkTS 严格语法检查与 JSON→类型生成。
 
 ## 功能
@@ -32,19 +38,27 @@ npm run build      # 编译 + 复制 arktsup lib
 npm run package    # 产出 .vsix
 ```
 
-## Marketplace 上架（可选）
+## Marketplace 上架
 
-1. 在 https://marketplace.visualstudio.com/manage 用你的微软账号创建发布者（publisher 名与 package.json 一致：yanceecha）
-2. 生成 PAT（需要 Marketplace: Manage 权限）：https://marketplace.visualstudio.com/manage/publishers/<publisher>/pat
-3. 发布：
+上架需在 https://marketplace.visualstudio.com/manage 创建发布者 **yanceecha**，并准备 PAT（`Marketplace: Manage` 权限）。详见 [docs/RELEASE.md](../docs/RELEASE.md#2-vs-code-插件marketplace-上架)。
 
-```bash
-cd plugin
-npx --yes @vscode/vsce login yanceecha
-npx --yes @vscode/vsce publish
-```
+- **自动发布（推荐）**：把 PAT 写入仓库 Secret `VSCE_PAT` 后，打 `vscode-v*` 标签即触发 [publish-vscode.yml](../.github/workflows/publish-vscode.yml) 自动上架：
 
-> .vscodeignore 已配置，发布包只含入口与 arktsup lib（20 个文件，~60KB），不含源码/测试。
+  ```bash
+  cd plugin && npm version patch
+  git tag vscode-v0.2.1 && git push origin main --tags
+  ```
+
+- **手动发布**：
+
+  ```bash
+  cd plugin
+  npm run package          # 产出 arktsup-vscode.vsix
+  VSCE_PAT=<你的PAT> npx --yes @vscode/vsce publish --packagePath arktsup-vscode.vsix --skip-duplicate
+  ```
+
+> .vscodeignore 已配置，发布包只含入口与 arktsup lib（23 个文件，~58KB），不含源码/测试。
+> 徽章（版本/下载/评分）会在首次发布后自动点亮。
 
 ## 使用示例
 

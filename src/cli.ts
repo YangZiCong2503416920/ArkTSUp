@@ -12,9 +12,13 @@ import { runTemplate } from './commands/template';
 import { runResource } from './commands/resource';
 import { runMigrate } from './commands/migrate';
 
-// 版本号与 package.json 保持同步（npm 安装后从包内读取）
+// 版本号与 package.json 保持同步（npm 安装后从包内读取）。
+// 兼容三种布局：仓库内 dist/src、npm 包 dist/src、VS Code 插件内 lib/（lib/../package.json）。
 const VERSION: string = (() => {
-  try { return require('../../package.json').version; } catch { return '0.1.0'; }
+  for (const rel of ['../../package.json', '../package.json']) {
+    try { return require(rel).version; } catch { /* 继续尝试下一个 */ }
+  }
+  return '0.0.0';
 })();
 
 const HELP = `arktsup v${VERSION} — 给 ArkTS 提效的命令行小工具集

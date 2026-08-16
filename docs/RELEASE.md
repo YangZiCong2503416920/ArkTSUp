@@ -44,16 +44,63 @@ npm publish --userconfig /tmp/publish.npmrc
 - **弃用（推荐）**：`npm deprecate arktsup@<坏版本> "原因"`
 - **删除**：bypass-2FA 令牌**禁止删除**操作（npm 安全策略），需在 npmjs 网页或普通令牌+OTP 下执行
 
-## 2. VS Code 插件
+## 2. VS Code 插件（Marketplace 上架）
+
+插件目录 `plugin/`（name: `arktsup-vscode`，publisher: `yanceecha`）。构建产物自包含：编译后的入口 `out/extension.js` + 复制的 arktsup CLI `lib/`，全部打进 .vsix。
+
+### 2.1 本地构建与校验
 
 ```bash
 cd plugin
 npm install
-npm run build        # tsc 编译 + 复制 arktsup lib 到 plugin/lib
-npm run package      # 产出 plugin/arktsup-vscode.vsix
+npm run build        # 清理 out/ -> tsc 编译(src -> out/) -> 复制 arktsup lib 到 plugin/lib
+npm run package      # vsce 打包校验 -> 产出 plugin/arktsup-vscode.vsix
+npx @vscode/vsce ls  # 查看 .vsix 内容（应只有 package.json/icon/README/LICENSE/CHANGELOG/out/lib）
 ```
 
-分发：VS Code 扩展面板 → 从 VSIX 安装；若上架市场需在 https://marketplace.visualstudio.com/manage 创建发布者并 `vsce publish`。
+> 注意：`plugin/tsconfig.json` 的 `rootDir: src`、`outDir: out`，确保 `main` 指向的
+> `out/extension.js` 由 tsc 直接产出；`npm run build` 会先清理 out/，避免过期产物进包。
+
+### 2.2 上架前置（只需做一次，需要你的微软账号）
+
+1. **创建发布者**：https://marketplace.visualstudio.com/manage → 用微软账号登录 → 创建发布者，名称必须与 `plugin/package.json` 的 `publisher` 一致：`yanceecha`
+2. **生成 PAT**：https://marketplace.visualstudio.com/manage/publishers/yanceecha/pat
+   - Organization: All accessible organizations
+   - Scopes: **Marketplace → Manage**
+   - 复制生成的 PAT（仅显示一次）
+3. **把 PAT 写入 GitHub Secrets**：仓库 Settings → Secrets and variables → Actions → New repository secret，名称 **`VSCE_PAT`**，值粘贴 PAT
+
+### 2.3 自动发布（推荐）
+
+每次发版打 tag 即自动上架（workflow: `.github/workflows/publish-vscode.yml`）：
+
+```bash
+# 1) 改插件版本号（必须与 plugin/package.json 一致）
+cd plugin && npm version patch   # 或 minor / major
+git add plugin/package.json plugin/package-lock.json && git commit -m "chore(plugin): bump v0.2.x"
+# 2) 打 vscode-v* 标签并推送
+git tag vscode-v0.2.1 && git push origin main --tags
+```
+
+GitHub Actions 自动：构建根 CLI → 编译插件 → `vsce publish --skip-duplicate`。
+已发布的版本会自动跳过，CI 保持绿。
+
+### 2.4 手动发布（备用，本地有 PAT 时）
+
+```bash
+cd plugin
+export VSCE_PAT=<你的 PAT>        # 或先 vsce login yanceecha
+npx --yes @vscode/vsce publish --skip-duplicate
+```
+
+### 2.5 本地安装（不上架时）
+
+VS Code 扩展面板 → ⋯ → 从 VSIX 安装 → 选择 `plugin/arktsup-vscode.vsix`。
+
+### 2.6 回滚/下架
+
+- 下架某版本：Marketplace 管理页 → 对应版本 → Unpublish
+- 下线整个扩展：Marketplace 管理页 → 扩展 → ⋯ → Remove
 
 ## 3. 版本历史
 

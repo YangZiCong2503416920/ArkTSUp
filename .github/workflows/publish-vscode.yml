@@ -1,0 +1,44 @@
+name: Publish VS Code Extension (Marketplace)
+
+# 触发: 推送 vscode-v* 版本标签（如 git tag vscode-v0.2.0 && git push origin vscode-v0.2.0）
+# 原理: vsce publish 使用 GitHub Secret VSCE_PAT（一次性配置）
+# 前置条件(必做一次):
+#   1) 在 https://marketplace.visualstudio.com/manage 创建发布者 yanceecha
+#   2) 生成 PAT（Marketplace: Manage 权限）: https://marketplace.visualstudio.com/manage/publishers/yanceecha/pat
+#   3) 把 PAT 写入仓库 Secrets: Settings -> Secrets and variables -> Actions -> New repository secret
+#      名称必须为 VSCE_PAT
+# 说明: 版本号取 plugin/package.json；--skip-duplicate 保证已发布的版本自动跳过，CI 保持绿。
+
+on:
+  push:
+    tags: ['vscode-v*']
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      # 1) 构建根项目 CLI，供插件 copy-lib 打包进 .vsix
+      - name: Build arktsup CLI
+        run: |
+          npm ci
+          npm run build
+
+      # 2) 编译插件 + 生成 .vsix（vsce 自带发布前校验）
+      - name: Build & package extension
+        working-directory: plugin
+        run: |
+          npm ci
+          npm run package
+
+      # 3) 发布到 VS Code Marketplace
+      - name: Publish to Marketplace
+        working-directory: plugin
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: npx --yes @vscode/vsce publish --packagePath arktsup-vscode.vsix --skip-duplicate
