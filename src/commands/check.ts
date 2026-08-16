@@ -17,6 +17,7 @@ import { scanSource, applyAutoFixes, DEFAULT_SKIP, ScanReport, Severity, Finding
 import { loadConfig, isRuleIgnored } from '../lib/config';
 import { checkApiVersionInSource, detectMinApiVersion } from '../lib/api-check';
 import { renderHtmlReport, renderJsonReport, FixStats } from '../lib/report';
+import { analyzeSemantics } from '../lib/semantic';
 
 const SEV_COLOR: Record<string, string> = {
   error: '\x1b[31m',   // red
@@ -34,6 +35,7 @@ export function runCheck(argv: string[]): number {
   let staged = false;
   let apiVersion: number | undefined;
   let reportFile: string | undefined;
+  let semantic = true;
   const extraSkip: string[] = [];
 
   for (let i = 0; i < argv.length; i++) {
@@ -71,6 +73,9 @@ export function runCheck(argv: string[]): number {
       }
       case '--report':
         reportFile = argv[++i];
+        break;
+      case '--no-semantic':
+        semantic = false;
         break;
       case '-h': case '--help':
         console.log(HELP);
@@ -189,6 +194,28 @@ export function runCheck(argv: string[]): number {
         report.findings.push(...checkApiVersionInSource(f, fs.readFileSync(f, 'utf8'), minV, minSeverity));
       } catch { /* 跳过无法读取的文件 */ }
     }
+    report = summarize(report.findings, report.filesScanned, config);
+  }
+
+  // ---- 语义分析增强（D3）：类型信息精确判定 propsByIndex/untypedObjectLiteral/utilityType ----
+  // 目录模式默认开启；--no-semantic 关闭；watch/staged 因性能/快照语义跳过
+  if (semantic && !isFile && !watch && !staged && scannedFiles.length > 0) {
+    const sem = analyzeSemantics(scannedFiles);
+    const exempt = (f: Finding): boolean => {
+      const k = f.file + ':' + f.line + ':' + f.column;
+      if (f.rule === 'propsByIndex' && sem.propsByIndexExempt.has(k)) return true;
+      if (f.rule === 'untypedObjectLiteral' && sem.literalExempt.has(k)) return true;
+      if (f.rule === 'utilityType' && sem.utilityExempt.has(k)) return true;
+      return false;
+    };
+    report.findings = report.findings.filter((f) => !exempt(f));
+    // 升级为 error 的位置：移除语法层对应的 warning，避免重复报告
+    const upgradeKeys = new Set(sem.propsByIndexErrors.map((e) => e.file + ':' + e.line + ':' + e.column));
+    report.findings = report.findings.filter((f) => {
+      if (f.rule === 'propsByIndex' && upgradeKeys.has(f.file + ':' + f.line + ':' + f.column)) return false;
+      return true;
+    });
+    report.findings.push(...sem.propsByIndexErrors);
     report = summarize(report.findings, report.filesScanned, config);
   }
 

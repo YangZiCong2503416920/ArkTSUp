@@ -117,6 +117,10 @@ arktsup check src/main/ets --api-version 9
 
 # 生成 HTML（或 .json）迁移报告：扫描统计 + --fix 修复明细 + 问题表
 arktsup check src/main/ets --fix --report arktsup-report.html
+
+# 目录模式默认开启 TypeChecker 语义增强（propsByIndex 精确豁免/升级、utilityType 自定义类型豁免）
+# 大工程想跳过语义分析（更快）：
+arktsup check src/main/ets --no-semantic
 ```
 
 退出码：存在 error 时返回 1，只有 warning 返回 0。

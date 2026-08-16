@@ -106,9 +106,18 @@ sparse 克隆官方 applications_app_samples（master，6995 个 .ets）→ `--e
 - `--fix` 安全性：基于 AST 精确替换，实测不影响字符串和注释里的 "any"
 - 全链路回归：33/33 测试通过，CLI 各命令/退出码/参数校验正常
 
+## 4.5 语义分析增强（2026-08-17，D3，TypeChecker）
+
+新增 `src/lib/semantic.ts`：影子 .ts + ts.createProgram（TypeChecker），目录模式默认开启（`--no-semantic` 关闭）：
+
+- **propsByIndex 精确判定**：Record/Map/枚举/数组/类型化数组索引 → 豁免（移除 warning）；明确 interface/类型别名（含跨文件 import）→ 升级 error；any/unknown/object/class/union 保守不处理
+- **utilityType**：用户自定义的 Omit 等类型名（符号声明在用户代码）→ 豁免
+- **untypedObjectLiteral**：防御性豁免机制（语法启发式已保守，实际触发场景少，诚实记录）
+- 回归：官方 samples 4585 文件 **零误报升级**（4 处潜在升级全部甄别为官方合法代码：Sendable `as object` / Game2048 class 索引，已收紧判定）；社区工程 propsByIndex warning 部分豁免（contacts 6/9、interview 3/7；SepWeather 的 `router.getParams()` 因 @ohos 类型丢失保守保留）
+
 ## 5. 已知局限（不隐瞒）
 
-- 无类型解析器：propsByIndex 只能启发式检测（Record 豁免无法静态区分）；untypedObjectLiteral 无法判断"带方法的类/自定义构造函数的类/readonly 类"（recipe38 的四类上下文之二），会漏报
+- ~~无类型解析器~~（D3 已引入 TypeChecker，propsByIndex/utilityType 已精确；`untypedObjectLiteral` 的 recipe38 类上下文仍以语法启发式为主，语义豁免为防御性）
 - utilityType 无法区分用户自定义的 `Omit` 等类型名（罕见，误报概率低）
 - 规则以官方 master 分支为准，API 版本演进后需复查（RULES.md 记录有复查方法）
 - 未在真机/DevEco 编译验证（本工具是静态分析器，不替代编译）
