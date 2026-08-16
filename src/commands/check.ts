@@ -25,9 +25,11 @@ const RESET = '\x1b[0m';
 
 export function runCheck(argv: string[]): number {
   let target = '.';
-  let format: 'text' | 'json' = 'text';
+  let format: 'text' | 'json' | 'markdown' = 'text';
   let minSeverity: Severity = 'warning';
   let fix = false;
+  let watch = false;
+  let staged = false;
   const extraSkip: string[] = [];
 
   for (let i = 0; i < argv.length; i++) {
@@ -35,7 +37,7 @@ export function runCheck(argv: string[]): number {
     switch (a) {
       case '--format': {
         const v = argv[++i];
-        if (v !== 'text' && v !== 'json') { console.error('错误: --format 只支持 text | json'); return 2; }
+        if (v !== 'text' && v !== 'json' && v !== 'markdown') { console.error('错误: --format 只支持 text | json | markdown'); return 2; }
         format = v;
         break;
       }
@@ -50,6 +52,12 @@ export function runCheck(argv: string[]): number {
         break;
       case '--fix':
         fix = true;
+        break;
+      case '--watch':
+        watch = true;
+        break;
+      case '--staged':
+        staged = true;
         break;
       case '-h': case '--help':
         console.log(HELP);
@@ -68,71 +76,119 @@ export function runCheck(argv: string[]): number {
   }
   const isFile = fs.statSync(abs).isFile();
   const config = loadConfig(isFile ? path.dirname(abs) : abs);
+  const skip = new Set([...DEFAULT_SKIP, ...extraSkip, ...(config.ignore?.dirs ?? [])]);
 
-  let report: ScanReport;
-  let totalFixed = 0;
-  const processFileContent = (file: string, text: string): Finding[] => {
-    let src = text;
-    if (fix) {
-      const res = applyAutoFixes(src);
-      if (res.total > 0) {
-        fs.writeFileSync(file, res.text);
-        totalFixed += res.total;
-        src = res.text;
+  /** 构造一次检查运行（含 --fix 写入），返回处理器与已修复计数 */
+  const makeProcessor = (): { processFileContent: (f: string, t: string) => Finding[]; getTotalFixed: () => number } => {
+    let totalFixed = 0;
+    const processFileContent = (file: string, text: string): Finding[] => {
+      let src = text;
+      if (fix) {
+        const res = applyAutoFixes(src);
+        if (res.total > 0) {
+          fs.writeFileSync(file, res.text);
+          totalFixed += res.total;
+          src = res.text;
+        }
       }
-    }
-    return scanSource(file, src, minSeverity);
-  };
-  if (isFile) {
-    let findings: Finding[];
-    try {
-      findings = processFileContent(abs, fs.readFileSync(abs, 'utf8'));
-    } catch (e) {
-      console.error(`错误: 无法处理 ${abs}: ${(e as Error).message}`);
-      return 2;
-    }
-    report = {
-      findings,
-      filesScanned: 1,
-      errors: findings.filter((f) => f.severity === 'error').length,
-      warnings: findings.filter((f) => f.severity === 'warning').length,
-      infos: findings.filter((f) => f.severity === 'info').length,
+      return scanSource(file, src, minSeverity);
     };
-  } else {
-    const { collectEtsFiles } = require('../lib/arkts-check') as typeof import('../lib/arkts-check');
-    const skip = new Set([...DEFAULT_SKIP, ...extraSkip, ...(config.ignore?.dirs ?? [])]);
-    const files = collectEtsFiles(abs, skip);
+    return { processFileContent, getTotalFixed: () => totalFixed };
+  };
+
+  /** 对一组文件跑检查并汇总报告 */
+  const runOnFiles = (files: string[], proc: { processFileContent: (f: string, t: string) => Finding[] }): ScanReport => {
     const findings: Finding[] = [];
     for (const f of files) {
       try {
-        findings.push(...processFileContent(f, fs.readFileSync(f, 'utf8')));
+        findings.push(...proc.processFileContent(f, fs.readFileSync(f, 'utf8')));
       } catch (e) {
         console.error(`跳过 ${f}: ${(e as Error).message}`);
       }
     }
-    report = {
-      findings,
-      filesScanned: files.length,
-      errors: findings.filter((f) => f.severity === 'error').length,
-      warnings: findings.filter((f) => f.severity === 'warning').length,
-      infos: findings.filter((f) => f.severity === 'info').length,
-    };
-  }
-  // 应用 .arktsuprc 的规则忽略
-  report.findings = report.findings.filter((f) => !isRuleIgnored(config, f.rule));
-  report.errors = report.findings.filter((f) => f.severity === 'error').length;
-  report.warnings = report.findings.filter((f) => f.severity === 'warning').length;
-  report.infos = report.findings.filter((f) => f.severity === 'info').length;
+    return summarize(findings, files.length, config);
+  };
 
+  // ---- --staged：只检查 git 暂存区的 .ets（pre-commit 场景） ----
+  if (staged) {
+    const stagedFiles = getStagedEtsFiles(process.cwd());
+    if (stagedFiles === null) {
+      console.error('错误: --staged 需要 git 仓库（当前目录或父目录不是 git 仓库）');
+      return 2;
+    }
+    if (stagedFiles.length === 0) {
+      process.stdout.write('暂存区没有 .ets 文件\n');
+      return 0;
+    }
+    const proc = makeProcessor();
+    const report = runOnFiles(stagedFiles, proc);
+    return outputReport(report, proc.getTotalFixed(), format, isRuleIgnored);
+  }
+
+  // ---- --watch：监听目录变更自动重查 ----
+  if (watch) {
+    if (isFile) {
+      console.error('错误: --watch 需要目录路径');
+      return 2;
+    }
+    return runWatch(abs, { minSeverity, fix, skip, config, format, makeProcessor, runOnFiles });
+  }
+
+  // ---- 单次检查 ----
+  const proc = makeProcessor();
+  let report: ScanReport;
+  if (isFile) {
+    let findings: Finding[];
+    try {
+      findings = proc.processFileContent(abs, fs.readFileSync(abs, 'utf8'));
+    } catch (e) {
+      console.error(`错误: 无法处理 ${abs}: ${(e as Error).message}`);
+      return 2;
+    }
+    report = summarize(findings, 1, config);
+  } else {
+    const { collectEtsFiles } = require('../lib/arkts-check') as typeof import('../lib/arkts-check');
+    const files = collectEtsFiles(abs, skip);
+    report = runOnFiles(files, proc);
+  }
+  return outputReport(report, proc.getTotalFixed(), format, isRuleIgnored);
+}
+
+/** 汇总 findings 为报告并应用 .arktsuprc 规则忽略 */
+function summarize(findings: Finding[], filesScanned: number, config: ReturnType<typeof loadConfig>): ScanReport {
+  const filtered = findings.filter((f) => !isRuleIgnored(config, f.rule));
+  return {
+    findings: filtered,
+    filesScanned,
+    errors: filtered.filter((f) => f.severity === 'error').length,
+    warnings: filtered.filter((f) => f.severity === 'warning').length,
+    infos: filtered.filter((f) => f.severity === 'info').length,
+  };
+}
+
+/** 输出报告（text/json/markdown）并返回退出码 */
+function outputReport(report: ScanReport, totalFixed: number, format: 'text' | 'json' | 'markdown', _ignored: unknown): number {
   if (totalFixed > 0) {
-    process.stdout.write(`已自动修复 ${totalFixed} 处：any/unknown -> Object、var -> let（any 部分请再手动改为具体类型）\n`);
+    process.stdout.write(`已自动修复 ${totalFixed} 处（any->Object、var->let、<T>expr->as T、解构拆分；解构/断言后请编译验证）\n`);
   }
-
   if (format === 'json') {
     process.stdout.write(JSON.stringify(report, null, 2) + '\n');
     return report.errors > 0 ? 1 : 0;
   }
-
+  if (format === 'markdown') {
+    process.stdout.write(`## ArkTSUp 检查报告\n\n扫描 ${report.filesScanned} 个 .ets 文件：${report.errors} 错误，${report.warnings} 警告，${report.infos} 提示\n\n`);
+    if (report.findings.length === 0) {
+      process.stdout.write('✅ 未发现问题\n');
+      return 0;
+    }
+    process.stdout.write('| 文件 | 行:列 | 级别 | 规则 | 问题 |\n| --- | --- | --- | --- | --- |\n');
+    for (const f of report.findings) {
+      const rel = path.relative(process.cwd(), f.file) || f.file;
+      const msg = f.message.replace(/\|/g, '\\|').replace(/\n/g, ' ');
+      process.stdout.write(`| ${rel} | ${f.line}:${f.column} | ${f.severity} | ${f.rule} | ${msg} |\n`);
+    }
+    return report.errors > 0 ? 1 : 0;
+  }
   for (const f of report.findings) {
     const color = SEV_COLOR[f.severity] ?? '';
     const rel = path.relative(process.cwd(), f.file) || f.file;
@@ -142,11 +198,62 @@ export function runCheck(argv: string[]): number {
       `        建议: ${f.fix}\n`
     );
   }
-
-  process.stdout.write(
-    `\n扫描 ${report.filesScanned} 个 .ets 文件：${report.errors} 错误，${report.warnings} 警告，${report.infos} 提示\n`
-  );
+  process.stdout.write(`\n扫描 ${report.filesScanned} 个 .ets 文件：${report.errors} 错误，${report.warnings} 警告，${report.infos} 提示\n`);
   return report.errors > 0 ? 1 : 0;
+}
+
+/** git 暂存区的 .ets 文件（相对 cwd 解析为绝对路径） */
+function getStagedEtsFiles(cwd: string): string[] | null {
+  const cp = require('node:child_process') as typeof import('node:child_process');
+  const r = cp.spawnSync('git', ['diff', '--cached', '--name-only', '--diff-filter=ACMR'], { encoding: 'utf8', cwd });
+  if (r.status !== 0) return null;
+  return r.stdout.split('\n')
+    .map((f) => f.trim())
+    .filter((f) => f.endsWith('.ets'))
+    .map((f) => path.resolve(cwd, f))
+    .filter((f) => fs.existsSync(f));
+}
+
+/** --watch：监听目录（递归）变更，防抖 400ms 重跑；Ctrl+C 退出 */
+function runWatch(
+  abs: string,
+  opts: {
+    minSeverity: Severity; fix: boolean; skip: Set<string>;
+    config: ReturnType<typeof loadConfig>; format: 'text' | 'json' | 'markdown';
+    makeProcessor: () => { processFileContent: (f: string, t: string) => Finding[]; getTotalFixed: () => number };
+    runOnFiles: (files: string[], proc: { processFileContent: (f: string, t: string) => Finding[] }) => ScanReport;
+  },
+): number {
+  const { collectEtsFiles } = require('../lib/arkts-check') as typeof import('../lib/arkts-check');
+  const runOnce = (reason: string): void => {
+    const proc = opts.makeProcessor();
+    const files = collectEtsFiles(abs, opts.skip);
+    const report = opts.runOnFiles(files, proc);
+    process.stdout.write(`\n[watch] ${reason} —— `);
+    outputReport(report, proc.getTotalFixed(), opts.format, null);
+  };
+  runOnce('初始检查');
+  let timer: NodeJS.Timeout | undefined;
+  let watcher: fs.FSWatcher;
+  try {
+    watcher = fs.watch(abs, { recursive: true }, (_ev, name) => {
+      const n = String(name ?? '');
+      if (!n.endsWith('.ets') && !n.includes('.')) return; // 只关心 .ets 与目录事件
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => runOnce('检测到变更 ' + n), 400);
+    });
+  } catch (e) {
+    console.error(`错误: 无法监听 ${abs}: ${(e as Error).message}（当前平台可能不支持递归 watch，请用普通模式）`);
+    return 2;
+  }
+  process.stdout.write('[watch] 监听中（Ctrl+C 退出）...\n');
+  process.on('SIGINT', () => {
+    watcher.close();
+    process.stdout.write('\n[watch] 已退出\n');
+    process.exit(0);
+  });
+  // 常驻模式：返回 -1 让 cli.ts 跳过 process.exit（watcher 事件循环保持进程存活）
+  return -1;
 }
 
 const HELP = `arktsup check — 扫描 .ets 源码中的 ArkTS 不兼容写法
@@ -156,10 +263,12 @@ const HELP = `arktsup check — 扫描 .ets 源码中的 ArkTS 不兼容写法
   arktsup check src/main/ets/pages
 
 选项:
-  --format <fmt>        text | json（默认 text）
+  --format <fmt>        text | json | markdown（默认 text）
   --min-severity <s>    error | warning（默认 warning）
   --exclude <dirs>      额外跳过的目录（逗号分隔，追加到默认列表）
-  --fix                 自动修复 noAny（把 any 替换为 unknown）
+  --fix                 自动修复：any->Object、var->let、<T>expr->as T、解构拆分（保守子集）
+  --watch               监听目录变更自动重查（Ctrl+C 退出）
+  --staged              只检查 git 暂存区的 .ets（配合 pre-commit）
   -h, --help            显示帮助
 
 已覆盖规则（全部对照官方文档，详见 docs/RULES.md）:

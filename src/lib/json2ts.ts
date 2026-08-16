@@ -24,6 +24,8 @@ export interface Json2TsOptions {
   sort?: boolean;
   /** 所有字段标记为可选，默认 false */
   optional?: boolean;
+  /** 为字段生成示例值注释（取首个非空样本，截断 40 字符），默认 false */
+  genComments?: boolean;
   /** 最大嵌套深度（防止异常数据爆栈），默认 20 */
   maxDepth?: number;
 }
@@ -75,6 +77,7 @@ export function jsonToArkTs(input: unknown, options: Json2TsOptions = {}): Json2
   const indent = options.indent ?? 2;
   const sort = options.sort ?? false;
   const allOptional = options.optional ?? false;
+  const genComments = options.genComments ?? false;
   const maxDepth = options.maxDepth ?? 20;
   const warnings: string[] = [];
   const typeNames: string[] = [];
@@ -236,7 +239,16 @@ export function jsonToArkTs(input: unknown, options: Json2TsOptions = {}): Json2
         const type = resolved.nullable && resolved.type !== 'null'
           ? `${resolved.type} | null`
           : resolved.type;
-        fieldLines.push(`${ind(1)}${safeKey}${q}: ${type}`);
+        let fieldLine = `${ind(1)}${safeKey}${q}: ${type}`;
+        if (genComments && samples.length > 0) {
+          const sample = samples.find((x) => x !== null && x !== undefined);
+          if (sample !== undefined) {
+            const raw = typeof sample === 'string' ? sample : JSON.stringify(sample);
+            const short = String(raw).replace(/\s+/g, ' ').slice(0, 40);
+            if (short) fieldLine += ` // 示例: ${short}`;
+          }
+        }
+        fieldLines.push(fieldLine);
       }
       const decl = style === 'class' ? `export class ${name} {` : `export interface ${name} {`;
       blocks.push([decl, ...fieldLines, ind(0) + '}'].join('\n'));

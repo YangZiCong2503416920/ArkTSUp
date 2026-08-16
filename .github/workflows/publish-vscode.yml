@@ -1,6 +1,6 @@
 name: Publish VS Code Extension (Marketplace)
 
-# 触发: 推送 vscode-v* 版本标签（如 git tag vscode-v0.2.1 && git push origin vscode-v0.2.1）
+# 触发: 推送 vscode-v* 版本标签（如 git tag vscode-v0.5.0 && git push origin vscode-v0.5.0）
 # 说明: 本 workflow 需要发布凭据；不上 CI 也可用网页上传（见 docs/RELEASE.md 2.3，无需任何令牌）。
 # 凭据两种方案任选其一，配好后 push 标签即自动上架；都没配则跳过发布（不报红）:
 #

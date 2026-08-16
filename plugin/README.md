@@ -61,7 +61,7 @@ npm run package    # 产出 .vsix
 
   ```bash
   cd plugin && npm version patch
-  git tag vscode-v0.2.1 && git push origin main --tags
+  git tag vscode-v0.5.0 && git push origin main --tags
   ```
 
   凭据二选一：Entra ID 托管身份（官方长期方案，`vsce publish --azure-credential`，无需 PAT）或

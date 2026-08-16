@@ -11,7 +11,7 @@
 ## 构建
 
 ```bash
-gradle buildPlugin    # 产出 build/distributions/arktsup-deveco-0.1.0.zip
+gradle buildPlugin    # 产出 build/distributions/arktsup-deveco-0.5.0.zip
 ```
 
 ## 安装

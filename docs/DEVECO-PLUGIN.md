@@ -40,7 +40,7 @@ deveco-plugin/
 cd deveco-plugin
 # 1) 首次：在 build.gradle.kts 里确认 intellij 平台版本与你 DevEco 匹配（见文件内注释）
 # 2) 用 DevEco Studio 自带的环境构建（或用独立 Gradle）
-gradle buildPlugin          # 产出 build/distributions/arktsup-deveco-0.1.0.zip
+gradle buildPlugin          # 产出 build/distributions/arktsup-deveco-0.5.0.zip
 # 3) DevEco Studio: Settings -> Plugins -> 齿轮 -> Install Plugin from Disk -> 选 zip
 # 4) 菜单 Tools -> ArkTSUp: 检查工程（或配置快捷键）
 ```

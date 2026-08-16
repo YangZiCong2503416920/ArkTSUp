@@ -438,3 +438,33 @@ test('noExtendSameProp: interface 继承多个同名方法接口（recipe102）'
   ].join('\n');
   assert.equal(rulesOf(ok, 'noExtendSameProp').length, 0);
 });
+test('applyAutoFixes: 解构拆分（对象/数组/重命名/hole，保守子集）', () => {
+  const { applyAutoFixes } = require('../src/lib/arkts-check') as typeof import('../src/lib/arkts-check');
+  // 对象解构
+  let r = applyAutoFixes('const { name, age } = user;');
+  assert.equal(r.text, 'const name = user.name;\nconst age = user.age;');
+  assert.equal(r.byRule.objectDestructuring, 1);
+  // 重命名 + 混合
+  r = applyAutoFixes('const { a: b, c } = obj;');
+  assert.equal(r.text, 'const b = obj.a;\nconst c = obj.c;');
+  // 数组解构 + hole
+  r = applyAutoFixes('const [first, , third] = arr;');
+  assert.equal(r.text, 'const first = arr[0];\nconst third = arr[2];');
+  // 缩进保持
+  r = applyAutoFixes('  const { x } = nested;\n  use(x);');
+  assert.ok(r.text.startsWith('  const x = nested.x;'));
+  // 不支持形态：rest / 默认值 / 嵌套 / 多声明器 -> 不动
+  assert.equal(applyAutoFixes('const { a, ...rest } = obj;').text, 'const { a, ...rest } = obj;');
+  assert.equal(applyAutoFixes('const { a = 1 } = obj;').text, 'const { a = 1 } = obj;');
+  assert.equal(applyAutoFixes('const { a: { b } } = obj;').text, 'const { a: { b } } = obj;');
+  assert.equal(applyAutoFixes('const { a } = obj, b = 1;').text, 'const { a } = obj, b = 1;');
+});
+
+test('applyAutoFixes: 解构后 check 不再报 objectDestructuring', () => {
+  const { applyAutoFixes } = require('../src/lib/arkts-check') as typeof import('../src/lib/arkts-check');
+  const src = 'const user = { name: \'a\' };\nconst { name } = user;\nconsole.log(name);';
+  const r = applyAutoFixes(src);
+  assert.equal(r.byRule.objectDestructuring, 1);
+  const findings = scanSource('t.ets', r.text).filter((f) => f.rule === 'objectDestructuring');
+  assert.equal(findings.length, 0);
+});

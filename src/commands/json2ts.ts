@@ -41,6 +41,7 @@ export function runJson2Ts(argv: string[]): number {
       case '--indent': options.indent = parseInt(argv[++i], 10); break;
       case '--sort': options.sort = true; break;
       case '--optional': options.optional = true; break;
+      case '--gen-comments': options.genComments = true; break;
       case '--max-depth': options.maxDepth = parseInt(argv[++i], 10); break;
       case '--out': outFile = argv[++i]; break;
       case '-h': case '--help':
@@ -130,6 +131,7 @@ const HELP = `arktsup json2ts — 把 JSON 转成符合 ArkTS 限制的类型声
   --indent <n>       缩进空格数（默认 2）
   --sort             字段按字母序排列
   --optional         所有字段标记为可选
+  --gen-comments     为字段生成示例值注释（取首个非空样本，截断 40 字符）
   --max-depth <n>    最大嵌套深度（默认 20）
   --out <file>       输出到文件（默认打印到 stdout）
   -h, --help         显示帮助

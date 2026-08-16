@@ -65,4 +65,5 @@ function main(): number {
   }
 }
 
-process.exit(main());
+const exitCode = main();
+if (exitCode >= 0) process.exit(exitCode); // <0 表示常驻模式（如 check --watch），不退出

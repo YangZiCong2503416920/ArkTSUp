@@ -5,7 +5,7 @@
  * 所有模板遵守 ArkTS 限制：无 any、无对象字面量无类型、类字段有初值（strictPropertyInitialization）。
  */
 
-export type TemplateType = 'page' | 'component' | 'dialog' | 'model' | 'state' | 'route-list';
+export type TemplateType = 'page' | 'component' | 'dialog' | 'model' | 'state' | 'preview' | 'route-list';
 
 export interface FieldSpec {
   name: string;
@@ -100,10 +100,34 @@ export function renderTemplate(type: TemplateType, opts: TemplateOptions): Templ
         fileName: name + '.ets',
         code: stateTemplate(name, fields),
       };
+    case 'preview':
+      return {
+        fileName: name + '.ets',
+        code: previewTemplate(name),
+      };
     case 'route-list': {
       throw new Error('route-list 需要扫描目录，请使用 renderRouteList()');
     }
   }
+}
+
+function previewTemplate(name: string): string {
+  return [
+    '// @Preview 模板：按 F5 在 Previewer 中单独预览此组件',
+    '@Preview',
+    '@Component',
+    'struct ' + name + ' {',
+    '  build() {',
+    '    Column({ space: 8 }) {',
+    '      // TODO: 在此构建预览内容',
+    "      Text('Preview: ' + '" + name + "')",
+    '        .fontSize(16)',
+    '    }',
+    '    .padding(16)',
+    '  }',
+    '}',
+    '',
+  ].join('\n');
 }
 
 function pageTemplate(name: string): string {

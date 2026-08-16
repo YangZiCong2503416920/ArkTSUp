@@ -1282,6 +1282,8 @@ export function fixAnyInSource(sourceText: string): { text: string; fixed: numbe
  * 自动修复集合：目前支持
  *  1. any/unknown -> Object（arkts-no-any-unknown）
  *  2. var -> let（arkts-no-var）
+ *  3. <T>expr -> expr as T（arkts-as-casts）
+ *  4. 解构拆分：{ a, b } = obj -> 逐字段（arkts-no-destruct-decls）
  * 全部基于 AST 精确替换，不影响字符串/注释。
  */
 export interface FixSummary {
@@ -1302,6 +1304,7 @@ export function applyAutoFixes(sourceText: string): FixSummary {
   }
   const varPositions: { start: number; end: number }[] = [];
   const castReplacements: { start: number; end: number; text: string }[] = [];
+  const destrReplacements: { start: number; end: number; text: string }[] = [];
   function walk(n: ts.Node): void {
     if (ts.isVariableDeclarationList(n) && !(n.flags & ts.NodeFlags.BlockScoped)) {
       varPositions.push({ start: n.getStart(sf), end: n.getStart(sf) + 3 });
@@ -1320,24 +1323,77 @@ export function applyAutoFixes(sourceText: string): FixSummary {
         text: (simple ? exprText : '(' + exprText + ')') + ' as ' + typeText,
       });
     }
+    // 解构声明拆分：const { a, b } = obj -> const a = obj.a; const b = obj.b;
+    if (ts.isVariableDeclaration(n) && (ts.isObjectBindingPattern(n.name) || ts.isArrayBindingPattern(n.name))) {
+      const r = buildDestructureReplacement(n, sf);
+      if (r) destrReplacements.push(r);
+      return; // 不深入绑定模式内部（绑定元素由替换整体处理；不支持的形态跳过）
+    }
     ts.forEachChild(n, walk);
   }
   walk(sf);
+
+  // 合并应用（从后往前；区间重叠的替换跳过，避免文本错位）
   let text = anyRes.text;
   let fixed = 0;
-  for (const { start, end } of varPositions.sort((a, b) => b.start - a.start)) {
-    if (text.slice(start, end) !== 'var') continue;
-    text = text.slice(0, start) + 'let' + text.slice(end);
-    fixed++;
-  }
-  byRule.varDecl = fixed;
-  // angleCast 替换（与 var 的位置不重叠，独立应用）
-  let castFixed = 0;
-  for (const r of castReplacements.sort((a, b) => b.start - a.start)) {
+  const applied: { start: number; end: number; rule: string }[] = [];
+  const overlaps = (s: number, e: number): boolean => applied.some((a) => s < a.end && e > a.start);
+  for (const r of destrReplacements.concat(castReplacements).sort((a, b) => b.start - a.start)) {
+    if (overlaps(r.start, r.end)) continue;
     if (text.slice(r.start, r.end) === r.text) continue;
     text = text.slice(0, r.start) + r.text + text.slice(r.end);
-    castFixed++;
+    applied.push({ start: r.start, end: r.end, rule: destrReplacements.indexOf(r) >= 0 ? 'objectDestructuring' : 'angleCast' });
+    fixed++;
   }
-  byRule.angleCast = castFixed;
-  return { text, total: anyRes.fixed + fixed + castFixed, byRule };
+  for (const { start, end } of varPositions.sort((a, b) => b.start - a.start)) {
+    if (overlaps(start, end)) continue;
+    if (text.slice(start, end) !== 'var') continue;
+    text = text.slice(0, start) + 'let' + text.slice(end);
+    applied.push({ start, end, rule: 'varDecl' });
+    fixed++;
+  }
+  for (const a of applied) byRule[a.rule] = (byRule[a.rule] || 0) + 1;
+  return { text, total: fixed, byRule };
+}
+
+/**
+ * 生成解构声明的逐字段替换（保守子集：支持简单标识符/重命名绑定；
+ * 嵌套解构、剩余属性、默认值、数组 hole、多声明器、带类型注解一律跳过）。
+ * 返回 null 表示无法安全修复（调用方记录跳过）。
+ */
+function buildDestructureReplacement(n: ts.VariableDeclaration, sf: ts.SourceFile): { start: number; end: number; text: string } | null {
+  const declList = n.parent;
+  if (!ts.isVariableDeclarationList(declList) || declList.declarations.length !== 1 || n.type) return null;
+  const stmt = declList.parent;
+  if (!ts.isVariableStatement(stmt)) return null;
+  const initText = n.initializer ? n.initializer.getText(sf) : null;
+  if (!initText) return null;
+  const keyword = (declList.flags & ts.NodeFlags.Let) ? 'let' : (declList.flags & ts.NodeFlags.Const) ? 'const' : 'var';
+  const indentMatch = stmt.getText(sf).match(/^[ \t]*/);
+  const indent = indentMatch ? indentMatch[0] : '';
+  const lines: string[] = [];
+  const isObj = ts.isObjectBindingPattern(n.name);
+  if (isObj) {
+    for (const el of n.name.elements) {
+      if (!ts.isBindingElement(el)) continue;
+      if (el.dotDotDotToken) return null;                       // ...rest 跳过
+      if (el.initializer) return null;                          // 默认值跳过
+      if (!ts.isIdentifier(el.name)) return null;               // 嵌套绑定跳过
+      const prop = el.propertyName ? el.propertyName.getText(sf) : el.name.text;
+      lines.push(keyword + ' ' + el.name.text + ' = ' + initText + '.' + prop + ';');
+    }
+  } else {
+    let idx = 0;
+    for (const el of (n.name as ts.ArrayBindingPattern).elements) {
+      if (ts.isOmittedExpression(el)) { idx++; continue; }      // hole 占位
+      if (!ts.isBindingElement(el)) continue;
+      if (el.dotDotDotToken) return null;
+      if (el.initializer) return null;
+      if (!ts.isIdentifier(el.name)) return null;
+      lines.push(keyword + ' ' + el.name.text + ' = ' + initText + '[' + idx + '];');
+      idx++;
+    }
+  }
+  if (lines.length === 0) return null;
+  return { start: stmt.getStart(sf), end: stmt.getEnd(), text: lines.map((l) => indent + l).join('\n') };
 }

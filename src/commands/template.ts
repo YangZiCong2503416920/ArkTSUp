@@ -55,8 +55,8 @@ export function runTemplate(argv: string[]): number {
   const type = positional[0] as TemplateType | undefined;
   const name = positional[1];
 
-  if (!type || !['page', 'component', 'dialog', 'model', 'state', 'route-list'].includes(type)) {
-    console.error('错误: 请指定模板类型 page | component | dialog | model | state | route-list');
+  if (!type || !['page', 'component', 'dialog', 'model', 'state', 'preview', 'route-list'].includes(type)) {
+    console.error('错误: 请指定模板类型 page | component | dialog | model | state | preview | route-list');
     console.log(HELP);
     return 2;
   }
@@ -129,6 +129,7 @@ const HELP = `arktsup template — 样板代码生成器
                                          生成数据模型（interface/class）
   arktsup template state <Name> --fields "count:number,userName:string"
                                          生成 @Observed 状态类
+  arktsup template preview <Name>        生成 @Preview 预览组件（F5 单独预览）
   arktsup template route-list --dir <pagesDir>
                                          扫描 @Entry 页面生成 RouteConstants.ets
 

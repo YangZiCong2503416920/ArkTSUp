@@ -2,6 +2,12 @@
 
 本文件记录 ArkTSUp for VS Code 插件的版本变更（Marketplace 展示用）。
 
+## 0.5.0 — 2026-08-16
+
+- **与 CLI 0.5.0 对齐的整版升级**
+- check 规则 65 → 77（补齐 12 个 recipe，官方 4585 样本 0 误报）
+- 修复 lazy import / JSX 断言 / 类引用等边界误报
+- fuzz 测试上线（TS 解析器畸形输入容错）
 ## 0.2.1 — 2026-08-16
 
 - **正式上架 VS Code Marketplace（首个发布版本）**

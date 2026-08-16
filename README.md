@@ -64,8 +64,8 @@ arktsup json2ts api/user.json --name User --out src/model/User.ets
 # 从 stdin（也支持交互式粘贴，Ctrl+D 结束）
 cat data.json | arktsup json2ts --name User
 
-# 生成 class 风格 / 字段按字母序 / 全部可选
-arktsup json2ts data.json --style class --sort --optional
+# 生成 class 风格 / 字段按字母序 / 全部可选 / 带示例注释
+arktsup json2ts data.json --style class --sort --optional --gen-comments
 ```
 
 ### 选项
@@ -77,6 +77,7 @@ arktsup json2ts data.json --style class --sort --optional
 | --indent <n> | 缩进空格数 | 2 |
 | --sort | 字段按字母序 | 关闭 |
 | --optional | 所有字段标记可选 | 关闭 |
+| --gen-comments | 字段生成示例值注释（取首个非空样本，截断 40 字符） | 关闭 |
 | --max-depth <n> | 最大嵌套深度 | 20 |
 | --out <file> | 输出到文件 | stdout |
 
@@ -96,13 +97,20 @@ arktsup json2ts data.json --style class --sort --optional
 # 扫描整个目录（自动跳过 node_modules / oh_modules / .hvigor / build 等）
 arktsup check src/main/ets
 
-# 扫描单个文件 / 机器可读输出 / 只看 error
+# 扫描单个文件 / 机器可读输出 / Markdown 报告（CI 注释用）
 arktsup check src/entry/Index.ets
 arktsup check src/main/ets --format json
+arktsup check src/main/ets --format markdown
 arktsup check src/main/ets --min-severity error
 
-# 自动修复：any/unknown -> Object、var -> let、<T>expr -> expr as T（any 部分需再手动收窄）
+# 自动修复：any/unknown -> Object、var -> let、<T>expr -> expr as T、解构拆分（保守子集）
 arktsup check src/main/ets --fix
+
+# 开发模式：监听目录变更自动重查（Ctrl+C 退出）
+arktsup check src/main/ets --watch
+
+# 只检查 git 暂存区的 .ets（pre-commit 场景，见 scripts/install-hook.sh）
+arktsup check --staged
 ```
 
 退出码：存在 error 时返回 1，只有 warning 返回 0。
@@ -192,6 +200,9 @@ arktsup template state CartState --fields "items:number,totalPrice:number"
 
 # 生成 @CustomDialog 弹窗（含 controller/回调骨架）
 arktsup template dialog ConfirmDialog
+
+# 生成 @Preview 预览组件（F5 在 Previewer 中单独预览）
+arktsup template preview MyPreview
 
 # 扫描页面目录生成路由常量表（自动识别 @Entry struct）
 arktsup template route-list --dir entry/src/main/ets/pages
@@ -295,7 +306,7 @@ npm test        # 构建 + 单元测试（node:test）
 
 ### ⏳ 待做
 
-- [ ] **VS Code 插件上架**：`plugin/arktsup-vscode.vsix`（v0.2.1）上传 Marketplace（网页上传无需 PAT，见 docs/RELEASE.md）
+- [ ] **VS Code 插件上架**：`plugin/arktsup-vscode.vsix`（v0.5.0）上传 Marketplace（网页上传无需 PAT，见 docs/RELEASE.md）
 - [ ] **DevEco Studio 插件**：骨架在 `deveco-plugin/`（未编译验证），按 docs/DEVECO-PLUGIN.md 在 DevEco 机器上构建
 - [ ] **语义分析升级（TypeChecker）**：propsByIndex 豁免 / untypedObjectLiteral 上下文 / utilityType 自定义类型 / structural typing（recipe30）
 - [ ] **recipe147（.ts 依赖 .ets）**：目录级跨文件 import 图分析

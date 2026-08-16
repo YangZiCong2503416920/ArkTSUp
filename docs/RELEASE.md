@@ -90,7 +90,7 @@ npm run package      # 产出 plugin/arktsup-vscode.vsix（含图标/README/CHAN
 cd plugin && npm version patch   # 或 minor / major
 git add plugin/package.json plugin/package-lock.json && git commit -m "chore(plugin): bump v0.2.x"
 # 2) 打 vscode-v* 标签并推送
-git tag vscode-v0.2.1 && git push origin main --tags
+git tag vscode-v0.5.0 && git push origin main --tags
 ```
 
 GitHub Actions 自动：构建根 CLI → 编译插件 → 用配置好的凭据 `vsce publish --skip-duplicate`（已发布的版本自动跳过）。
@@ -138,10 +138,12 @@ VS Code 扩展面板 → ⋯ → 从 VSIX 安装 → 选择 `plugin/arktsup-vsco
 | 0.1.5 | 2026-08-15 | check --fix 增加 angleCast、resource check --i18n 多语言键覆盖 |
 | 0.1.6 | 2026-08-15 | check 规则扩至 61 条、.arktsuprc 配置、migrate 103 模块、避坑清单 |
 | 0.1.7 | 2026-08-15 | check 规则扩至 65 条（decl/enum merging、uniqueNames、ESObject） |
+| 0.5.0 | 2026-08-16 | 整版升级：规则 65→77、fuzz 上线、回归基线 9 工程（见 docs/RELEASE-0.5.0.md） |
 
 ### VS Code 插件版本历史
 
 | 版本 | 日期 | 说明 |
 | --- | --- | --- |
 | 0.2.0 | 2026-08-16 | 上架准备：修复打包布局（main 由 tsc 直出）、自包含运行时依赖、图标/徽章/元数据 |
-| 0.2.1 | 2026-08-16 | 首个 Marketplace 发布版本（tag: vscode-v0.2.1） |
+| 0.2.1 | 2026-08-16 | 上架准备（tag: vscode-v0.2.1，后随整版对齐重打 vscode-v0.5.0） |
+| 0.5.0 | 2026-08-16 | 与 CLI 0.5.0 对齐（tag: vscode-v0.5.0） |

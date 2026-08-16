@@ -48,7 +48,7 @@ docs/RULES.md               # 规则溯源表（无出处的规则不允许存�
 feat(check): 规则 61 -> 65（decl/enum merging、uniqueNames、ESObject）
 fix(check): noMethodReassignment 降级 warning（真实工程抓出的误报）
 docs: 真实工程验证基线达成 5 个社区工程
-chore(plugin): bump to 0.2.1（首个 Marketplace 发布版本）
+chore(plugin): bump to 0.5.0（与 CLI 整版对齐）
 ```
 
 ## 6. 发布流程

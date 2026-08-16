@@ -2,7 +2,7 @@
   "name": "arktsup-vscode",
   "displayName": "ArkTSUp — HarmonyOS ArkTS 提效工具",
   "description": "ArkTS strict-syntax checker & JSON→type generator for HarmonyOS, powered by the arktsup CLI. ArkTS 严格语法检查与 JSON→类型生成（鸿蒙）。",
-  "version": "0.2.1",
+  "version": "0.5.0",
   "publisher": "yanceecha",
   "license": "MIT",
   "icon": "icon.png",
