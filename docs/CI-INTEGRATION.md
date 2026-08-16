@@ -63,6 +63,6 @@ npx --yes arktsup check src/main/ets --min-severity error
 
 ## 检查项说明
 
-- `check`：27 条 ArkTS 限制规则（any/unknown、对象字面量、解构、for..in、var、catch 类型等），全部对照官方文档
+- `check`：65 条 ArkTS 限制规则（any/unknown、对象字面量、解构、for..in、var、catch 类型等），全部对照官方文档逐条溯源（见 docs/RULES.md）
 - `migrate --dry-run`：API 升级时检查遗留的 @ohos.* 导入
 - `resource check`：资源引用缺失/冗余检查

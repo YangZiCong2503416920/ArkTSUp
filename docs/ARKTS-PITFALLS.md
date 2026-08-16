@@ -1,6 +1,6 @@
 # ArkTS 避坑清单（从 TypeScript 迁移必读）
 
-> 本文由 ArkTSUp 的 27 条 check 规则整理而成，全部对照华为官方《从 TypeScript 到 ArkTS 的适配规则》与
+> 本文由 ArkTSUp 的 65 条 check 规则整理而成（最新规则清单见 docs/RULES.md），全部对照华为官方《从 TypeScript 到 ArkTS 的适配规则》与
 > OpenHarmony 官方 linter（ets2panda）逐条核验。写完代码用 `npx arktsup check` 自动扫描，比人工记忆可靠。
 > 每条规则给出：错误示例 → 正确写法 → 官方规则名。
 

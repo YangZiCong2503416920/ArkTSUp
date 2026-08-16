@@ -4,7 +4,9 @@
 
 ## 质检自检清单（反水 PR 门禁，未打勾的 PR 会被打回）
 
-- [ ] `npm test` 全绿（33 用例）
+完整规矩见 [CONTRIBUTING.md](../CONTRIBUTING.md)。
+
+- [ ] `npm test` 全绿（当前 81 用例）
 - [ ] 若新增/修改 check 规则：已在 docs/RULES.md 补充官方出处（无出处不合并）
 - [ ] 若修改规则行为：已在官方 samples（3327 个 .ets 文件）上重跑，错误级误报 < 0.1%
 - [ ] 若修改 json2ts：examples/sample.json 输出人工核验无误

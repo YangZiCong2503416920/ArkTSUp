@@ -255,10 +255,14 @@ npm test        # 构建 + 单元测试（node:test）
 - [x] **模板代码生成器**：`arktsup template` — 页面 / 组件 / 数据模型 / @Observed 状态类 / 路由常量表
 - [x] **资源文件管理**：`arktsup resource` — 缺失引用检查、未使用资源检测、R.ets 常量生成、条目添加
 - [x] **API 版本迁移助手**：`arktsup migrate` — @ohos.* → @kit.* 检测与自动修复
+- [x] **VS Code 插件**：打包产物就绪（自包含 CLI、图标/徽章/元数据齐全），见 [plugin/README.md](plugin/README.md)
 
 ### ⏳ 待做
 
-- [x] **IDE 插件（VS Code）**：保存自动检查 / check / migrate / resource / json2ts，见 [plugin/README.md](plugin/README.md)；DevEco Studio 插件待做
+- [ ] **VS Code 插件上架**：`plugin/arktsup-vscode.vsix`（v0.2.1）上传 Marketplace（网页上传无需 PAT，见 docs/RELEASE.md）
+- [ ] **DevEco Studio 插件**：骨架在 `deveco-plugin/`（未编译验证），按 docs/DEVECO-PLUGIN.md 在 DevEco 机器上构建
+- [ ] **规则覆盖 65 → 80 recipe 全量** + 语义分析升级（propsByIndex 豁免 / untypedObjectLiteral 上下文 / utilityType 自定义类型）
+- [ ] **官方 samples 回归脚本**：一键重跑 3327 官方示例的误报基线
 
 ## License
 
