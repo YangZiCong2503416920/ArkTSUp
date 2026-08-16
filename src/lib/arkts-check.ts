@@ -1353,7 +1353,7 @@ export function applyAutoFixes(sourceText: string): FixSummary {
     fixed++;
   }
   for (const a of applied) byRule[a.rule] = (byRule[a.rule] || 0) + 1;
-  return { text, total: fixed, byRule };
+  return { text, total: anyRes.fixed + fixed, byRule };
 }
 
 /**

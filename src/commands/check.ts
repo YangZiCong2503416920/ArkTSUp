@@ -16,6 +16,7 @@ import * as fs from 'node:fs';
 import { scanSource, applyAutoFixes, DEFAULT_SKIP, ScanReport, Severity, Finding } from '../lib/arkts-check';
 import { loadConfig, isRuleIgnored } from '../lib/config';
 import { checkApiVersionInSource, detectMinApiVersion } from '../lib/api-check';
+import { renderHtmlReport, renderJsonReport, FixStats } from '../lib/report';
 
 const SEV_COLOR: Record<string, string> = {
   error: '\x1b[31m',   // red
@@ -32,6 +33,7 @@ export function runCheck(argv: string[]): number {
   let watch = false;
   let staged = false;
   let apiVersion: number | undefined;
+  let reportFile: string | undefined;
   const extraSkip: string[] = [];
 
   for (let i = 0; i < argv.length; i++) {
@@ -67,6 +69,9 @@ export function runCheck(argv: string[]): number {
         apiVersion = v;
         break;
       }
+      case '--report':
+        reportFile = argv[++i];
+        break;
       case '-h': case '--help':
         console.log(HELP);
         return 0;
@@ -86,9 +91,14 @@ export function runCheck(argv: string[]): number {
   const config = loadConfig(isFile ? path.dirname(abs) : abs);
   const skip = new Set([...DEFAULT_SKIP, ...extraSkip, ...(config.ignore?.dirs ?? [])]);
 
-  /** 构造一次检查运行（含 --fix 写入），返回处理器与已修复计数 */
-  const makeProcessor = (): { processFileContent: (f: string, t: string) => Finding[]; getTotalFixed: () => number } => {
+  /** 构造一次检查运行（含 --fix 写入），返回处理器与修复统计 */
+  const makeProcessor = (): {
+    processFileContent: (f: string, t: string) => Finding[];
+    getTotalFixed: () => number;
+    getFixStats: () => FixStats;
+  } => {
     let totalFixed = 0;
+    const fixStats: FixStats = { byRule: {}, total: 0, perFile: {} };
     const processFileContent = (file: string, text: string): Finding[] => {
       let src = text;
       if (fix) {
@@ -96,12 +106,20 @@ export function runCheck(argv: string[]): number {
         if (res.total > 0) {
           fs.writeFileSync(file, res.text);
           totalFixed += res.total;
+          fixStats.total += res.total;
+          const pf = (fixStats.perFile[file] = fixStats.perFile[file] || {});
+          for (const [r, n] of Object.entries(res.byRule)) {
+            if (n > 0) {
+              fixStats.byRule[r] = (fixStats.byRule[r] || 0) + n;
+              pf[r] = (pf[r] || 0) + n;
+            }
+          }
           src = res.text;
         }
       }
       return scanSource(file, src, minSeverity);
     };
-    return { processFileContent, getTotalFixed: () => totalFixed };
+    return { processFileContent, getTotalFixed: () => totalFixed, getFixStats: () => fixStats };
   };
 
   /** 对一组文件跑检查并汇总报告 */
@@ -172,6 +190,27 @@ export function runCheck(argv: string[]): number {
       } catch { /* 跳过无法读取的文件 */ }
     }
     report = summarize(report.findings, report.filesScanned, config);
+  }
+
+  // ---- 工程迁移报告（D2）：--report <file.html|file.json> ----
+  if (reportFile) {
+    const fixStats = proc.getFixStats();
+    const isJson = reportFile.endsWith('.json');
+    const outText = isJson
+      ? renderJsonReport(report, fixStats.total > 0 ? fixStats : undefined)
+      : renderHtmlReport({
+          title: 'ArkTSUp 检查/迁移报告',
+          report,
+          fixStats: fixStats.total > 0 ? fixStats : undefined,
+          apiVersion: minV ?? undefined,
+        });
+    try {
+      fs.writeFileSync(reportFile, outText);
+      process.stdout.write(`报告已生成: ${reportFile}\n`);
+    } catch (e) {
+      console.error(`错误: 无法写入报告 ${reportFile}: ${(e as Error).message}`);
+      return 2;
+    }
   }
 
   return outputReport(report, proc.getTotalFixed(), format, isRuleIgnored);
@@ -293,6 +332,7 @@ const HELP = `arktsup check — 扫描 .ets 源码中的 ArkTS 不兼容写法
   --watch               监听目录变更自动重查（Ctrl+C 退出）
   --staged              只检查 git 暂存区的 .ets（配合 pre-commit）
   --api-version <n>     检查 import 的 @ohos.* 模块是否在最低 API 版本可用（默认自动读 module.json5/app.json5）
+  --report <file>       生成 HTML（或 .json）迁移报告：扫描统计 + --fix 修复明细 + 问题表
   -h, --help            显示帮助
 
 已覆盖规则（全部对照官方文档，详见 docs/RULES.md）:

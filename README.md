@@ -114,6 +114,9 @@ arktsup check --staged
 
 # API 版本兼容检查：import 的 @ohos.* 模块是否在最低版本可用（不传则自动读 module.json5/app.json5）
 arktsup check src/main/ets --api-version 9
+
+# 生成 HTML（或 .json）迁移报告：扫描统计 + --fix 修复明细 + 问题表
+arktsup check src/main/ets --fix --report arktsup-report.html
 ```
 
 退出码：存在 error 时返回 1，只有 warning 返回 0。

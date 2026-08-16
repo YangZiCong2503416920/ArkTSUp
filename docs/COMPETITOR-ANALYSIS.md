@@ -44,8 +44,8 @@
 
 | # | 差异化功能 | 竞品依据（空白点） | 1.0.0 前落地版本 |
 | --- | --- | --- | --- |
-| D1 | **API 版本兼容检查**（check --api-version，结合 migrate 给升级路径） | oxc-ark system-api-version 有但规则少；CodeLinter 仅 IDE 内 | v0.6 |
-| D2 | **工程迁移报告**（--fix 后生成 HTML/JSON 迁移前后 diff 报告） | 全部竞品只检查不修、无报告 | v0.6 |
+| D1 | **API 版本兼容检查**（check --api-version，结合 migrate 给升级路径） | oxc-ark system-api-version 有但规则少；CodeLinter 仅 IDE 内 | ✅ v0.6 已完成（527 模块版本表，数据源 interface_sdk-js） |
+| D2 | **工程迁移报告**（--fix 后生成 HTML/JSON 迁移前后 diff 报告） | 全部竞品只检查不修、无报告 | ✅ v0.6 已完成（--report，HTML/JSON + 修复统计） |
 | D3 | **TypeChecker 语义分析**（propsByIndex 豁免 / untypedObjectLiteral 完整上下文 / utilityType 自定义类型） | oxc-ark 明言保守启发式；这是技术壁垒 | v0.7 |
 | D4 | **增量扫描/缓存**（大工程只扫变更文件，性能对标 oxc-ark 的 Rust 速度） | oxc-ark 快但无缓存语义；ArkTSUp 用缓存追平体验 | v0.8 |
 | D5 | **--fix 全面化**（索引访问转点号 / 对象字面量补类型 / import 清理） | 竞品修复能力为零 | v0.8 |
