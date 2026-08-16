@@ -404,6 +404,66 @@ const RULE_INFO: Record<string, RuleMeta> = {
     message: 'ESObject 类型使用受限（arkts-limited-esobj）',
     fix: '改用具体类型（仅互操作局部变量场景允许 ESObject）',
   },
+  noJsx: {
+    severity: 'error',
+    message: 'ArkTS 不支持 JSX 表达式（arkts-no-jsx）',
+    fix: '用 ArkUI 声明式 UI 语法（@Component struct + build()）替代',
+  },
+  noWith: {
+    severity: 'error',
+    message: 'ArkTS 不支持 with 语句（arkts-no-with）',
+    fix: '用完全限定名替代，如 Math.PI',
+  },
+  noInferredGenericParams: {
+    severity: 'error',
+    message: '泛型函数调用不能仅靠返回类型推断类型参数（arkts-no-inferred-generic-params）',
+    fix: '显式指定类型参数，如 greet<string>()',
+  },
+  noPolymorphicUnops: {
+    severity: 'error',
+    message: '一元运算符 + - ~ 只支持数值类型（arkts-no-polymorphic-unops）',
+    fix: '先显式转换，如 Number("5")',
+  },
+  noClassesAsObj: {
+    severity: 'error',
+    message: 'ArkTS 不支持把类当作对象值使用（arkts-no-classes-as-obj）',
+    fix: '类只能用于实例化（new C()）或静态访问（C.method()）',
+  },
+  extendsOnlyClass: {
+    severity: 'error',
+    message: 'interface 只能继承 interface，不能 extends class（arkts-extends-only-class）',
+    fix: '把基类改为 interface，或改用 class 继承',
+  },
+  implementsOnlyIface: {
+    severity: 'error',
+    message: 'implements 子句只能指定 interface（arkts-implements-only-iface）',
+    fix: '把基类改为 interface，或改用 extends',
+  },
+  noNsAsObj: {
+    severity: 'error',
+    message: 'ArkTS 不支持把 namespace 当作对象值（arkts-no-ns-as-obj）',
+    fix: '直接使用命名空间限定访问，如 MyNamespace.x',
+  },
+  noFuncProps: {
+    severity: 'error',
+    message: 'ArkTS 不支持在函数上声明属性（arkts-no-func-props）',
+    fix: '把附属功能拆成独立函数或对象',
+  },
+  instanceofRefTypes: {
+    severity: 'error',
+    message: 'instanceof 左操作数不能是类型（arkts-instanceof-ref-types）',
+    fix: '用实例表达式，如 new X() instanceof X',
+  },
+  noImplicitReturnTypes: {
+    severity: 'warning',
+    message: 'return 调用了返回类型省略的函数（arkts-no-implicit-return-types；静态推断存在边界误报，故降级 warning）',
+    fix: '给被调用函数显式声明返回类型',
+  },
+  noExtendSameProp: {
+    severity: 'error',
+    message: 'interface 不能继承含同名方法的多个接口（arkts-no-extend-same-prop）',
+    fix: '合并方法或重命名冲突方法',
+  },
 };
 
 function snippetOf(sourceFile: ts.SourceFile, node: ts.Node): string {
@@ -587,6 +647,86 @@ export function scanSource(file: string, sourceText: string, minSeverity: Severi
     if (ts.isReturnStatement(parent)) return enclosingFunctionHasReturnType(parent);
     // 其余位置（函数实参、数组元素、赋值右值等）保守视为有上下文，避免误报
     return true;
+  }
+
+  /**
+   * 文件级符号表（仅顶层声明；struct 关键字会让 TS 解析器错误恢复，
+   * 不会生成 ClassDeclaration，因此不会误入符号表——设计如此，避免对鸿蒙 UI 组件误报）。
+   */
+  const symbols = (() => {
+    const classes = new Set<string>();
+    const namespaces = new Set<string>();
+    const functions = new Set<string>();
+    const genericFunctions = new Set<string>();
+    const funcReturnUsesT = new Map<string, boolean>();
+    const funcReturnExplicit = new Map<string, boolean>();
+    const ifaceMethods = new Map<string, Set<string>>();
+    /** 函数返回类型是否引用其第一个类型参数（recipe34：只有这种才必须显式指定） */
+    const returnUsesTypeParam = (fn: ts.FunctionDeclaration): boolean => {
+      const tp = fn.typeParameters?.[0];
+      if (!tp || !fn.type) return false;
+      const name = tp.name.text;
+      let found = false;
+      const w = (n: ts.Node): void => {
+        if (found) return;
+        if (ts.isTypeReferenceNode(n) && ts.isIdentifier(n.typeName) && n.typeName.text === name) { found = true; return; }
+        ts.forEachChild(n, w);
+      };
+      w(fn.type);
+      return found;
+    };
+    for (const stmt of sf.statements) {
+      if (ts.isClassDeclaration(stmt) && stmt.name) {
+        classes.add(stmt.name.text);
+      } else if (ts.isInterfaceDeclaration(stmt) && stmt.name) {
+        const methods = new Set<string>();
+        for (const m of stmt.members) {
+          if ((ts.isMethodSignature(m) || ts.isMethodDeclaration(m)) && m.name && ts.isIdentifier(m.name)) {
+            methods.add(m.name.text);
+          }
+        }
+        ifaceMethods.set(stmt.name.text, methods);
+      } else if (ts.isModuleDeclaration(stmt) && stmt.name && ts.isIdentifier(stmt.name)) {
+        namespaces.add(stmt.name.text);
+      } else if (ts.isFunctionDeclaration(stmt) && stmt.name) {
+        functions.add(stmt.name.text);
+        if (stmt.typeParameters && stmt.typeParameters.length > 0) genericFunctions.add(stmt.name.text);
+        funcReturnUsesT.set(stmt.name.text, returnUsesTypeParam(stmt));
+        funcReturnExplicit.set(stmt.name.text, !!stmt.type);
+      }
+    }
+    return { classes, namespaces, functions, genericFunctions, funcReturnUsesT, funcReturnExplicit, ifaceMethods };
+  })();
+
+  /** 提取 extends/implements 后面的类型名（忽略泛型参数） */
+  function heritageName(t: ts.ExpressionWithTypeArguments): string | undefined {
+    return ts.isIdentifier(t.expression) ? t.expression.text : undefined;
+  }
+
+  /** 类/命名空间名是否被当作"值"使用（只报明确的值上下文，其余保守跳过防误报） */
+  function isClassRefAsValue(id: ts.Identifier): boolean {
+    const p = id.parent;
+    if (!p) return false;
+    // 类型上下文与声明位置
+    if (ts.isTypeReferenceNode(p) || ts.isExpressionWithTypeArguments(p) || ts.isTypeQueryNode(p)) return false;
+    if (ts.isImportSpecifier(p) || ts.isImportClause(p) || ts.isNamedImports(p)) return false;
+    // 实例化/静态访问/调用
+    if (ts.isNewExpression(p) && p.expression === id) return false;
+    if (ts.isPropertyAccessExpression(p) && p.expression === id) return false;
+    if (ts.isElementAccessExpression(p) && p.expression === id) return false;
+    if (ts.isCallExpression(p) && p.expression === id) return false;
+    if (ts.isBinaryExpression(p) && p.operatorToken.kind === ts.SyntaxKind.InstanceOfKeyword) return false;
+    if (ts.isAsExpression(p) || ts.isTypeAssertionExpression(p)) return false;
+    // 明确的值上下文
+    // 注意：不做"函数实参传类"——ArkTS 官方 API（@Type(Task)、AppStorageV2.connect(Setting)）合法要求传类引用，
+    // 静态无法区分哪些 API 接受类，误报代价大于漏报
+    if (ts.isVariableDeclaration(p) && p.initializer === id) return true;
+    if (ts.isPropertyAssignment(p) && p.initializer === id) return true;
+    // 只认 `=` 赋值右值；`Promise<C>` 等泛型类型在 struct 错误恢复下会被拆成 `<`/`>` 比较表达式，需跳过
+    if (ts.isBinaryExpression(p) && p.operatorToken.kind === ts.SyntaxKind.EqualsToken && p.right === id) return true;
+    if (ts.isReturnStatement(p) && p.expression === id) return true;
+    if (ts.isArrowFunction(p) && p.body === id) return true;
+    return false;
   }
 
   /** import 必须在其他语句之前 */
@@ -882,7 +1022,11 @@ export function scanSource(file: string, sourceText: string, minSeverity: Severi
     if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'require') {
       add('noRequire', node);
     }
-    if (ts.isImportEqualsDeclaration(node)) add('noRequire', node);
+    if (ts.isImportEqualsDeclaration(node)) {
+      // ArkTS lazy import 新特性 `import lazy { x } from '...'`：解析为 ImportEqualsDeclaration(name=lazy, moduleRef=Identifier)，合法
+      const isLazyImport = node.name.text === 'lazy' && ts.isIdentifier(node.moduleReference);
+      if (!isLazyImport) add('noRequire', node);
+    }
     // 48. export = / export as namespace
     // export = 是 ExportAssignment(isExportEquals=true)；export default x as T 也是 ExportAssignment 但合法
     if (ts.isExportAssignment(node) && node.isExportEquals) {
@@ -931,6 +1075,94 @@ export function scanSource(file: string, sourceText: string, minSeverity: Severi
     if (ts.isTypeReferenceNode(node) && node.typeName.getText(sf) === 'ESObject') {
       add('noLimitedESObject', node);
     }
+    // 58. with 语句（recipe84）
+    if (ts.isWithStatement(node)) add('noWith', node);
+    // 59. 泛型函数无参调用：仅靠返回类型推断类型参数（recipe34，保守子集）
+    if (
+      ts.isCallExpression(node) && !node.typeArguments && node.arguments.length === 0 &&
+      ts.isIdentifier(node.expression) &&
+      symbols.genericFunctions.has(node.expression.text) &&
+      symbols.funcReturnUsesT.get(node.expression.text) === true
+    ) {
+      add('noInferredGenericParams', node);
+    }
+    // 60. 一元 + - ~ 作用于字符串字面量（recipe55，保守子集：只查字面量）
+    if (
+      ts.isPrefixUnaryExpression(node) &&
+      (node.operator === ts.SyntaxKind.PlusToken || node.operator === ts.SyntaxKind.MinusToken ||
+        node.operator === ts.SyntaxKind.TildeToken) &&
+      ts.isStringLiteral(node.operand)
+    ) {
+      add('noPolymorphicUnops', node);
+    }
+    // 61. 类被当作对象值（recipe149，只报明确值上下文）
+    if (ts.isIdentifier(node) && symbols.classes.has(node.text) && isClassRefAsValue(node)) {
+      add('noClassesAsObj', node);
+    }
+    // 62. interface extends class（recipe104）
+    if (ts.isInterfaceDeclaration(node) && node.heritageClauses) {
+      for (const h of node.heritageClauses) {
+        if (h.token !== ts.SyntaxKind.ExtendsKeyword) continue;
+        for (const t of h.types) {
+          const n = heritageName(t);
+          if (n && symbols.classes.has(n)) add('extendsOnlyClass', t);
+        }
+      }
+    }
+    // 63. implements 指定了 class（recipe51）
+    if (ts.isClassDeclaration(node) && node.heritageClauses) {
+      for (const h of node.heritageClauses) {
+        if (h.token !== ts.SyntaxKind.ImplementsKeyword) continue;
+        for (const t of h.types) {
+          const n = heritageName(t);
+          if (n && symbols.classes.has(n)) add('implementsOnlyIface', t);
+        }
+      }
+    }
+    // 64. namespace 被当作对象值（recipe114）
+    if (ts.isIdentifier(node) && symbols.namespaces.has(node.text) && isClassRefAsValue(node)) {
+      add('noNsAsObj', node);
+    }
+    // 65. 在函数上声明属性（recipe139）
+    if (
+      ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+      ts.isPropertyAccessExpression(node.left) && ts.isIdentifier(node.left.expression) &&
+      symbols.functions.has(node.left.expression.text)
+    ) {
+      add('noFuncProps', node);
+    }
+    // 66. instanceof 左操作数是类型（recipe65）
+    if (
+      ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.InstanceOfKeyword &&
+      ts.isIdentifier(node.left) && symbols.classes.has(node.left.text)
+    ) {
+      add('instanceofRefTypes', node);
+    }
+    // 67. return 调用返回类型省略的函数（recipe90）
+    if (
+      ts.isReturnStatement(node) && node.expression && ts.isCallExpression(node.expression) &&
+      ts.isIdentifier(node.expression.expression) &&
+      symbols.funcReturnExplicit.get(node.expression.expression.text) === false
+    ) {
+      add('noImplicitReturnTypes', node);
+    }
+    // 68. interface 继承多个含同名方法的接口（recipe102）
+    if (ts.isInterfaceDeclaration(node) && node.heritageClauses) {
+      for (const h of node.heritageClauses) {
+        if (h.token !== ts.SyntaxKind.ExtendsKeyword || h.types.length < 2) continue;
+        const seen = new Set<string>();
+        for (const t of h.types) {
+          const n = heritageName(t);
+          if (!n) continue;
+          const methods = symbols.ifaceMethods.get(n);
+          if (!methods) continue;
+          for (const m of methods) {
+            if (seen.has(m)) add('noExtendSameProp', node);
+            seen.add(m);
+          }
+        }
+      }
+    }
 
     ts.forEachChild(node, walk);
   }
@@ -939,6 +1171,33 @@ export function scanSource(file: string, sourceText: string, minSeverity: Severi
   checkMisplacedImports();
   checkNameUniqueness();
   walk(sf);
+
+  // 57. JSX 表达式（recipe54）：TS 模式下 <div> 会被解析成类型断言/泛型箭头，不会产生 JsxElement，
+  // 因此用 TSX 模式单独解析；只有 TS 模式在 JSX 区域内有解析错误才判定为真 JSX——
+  // 合法断言（<T>expr）、泛型箭头、泛型调用（foo<Bar>()）在 TS 模式下均无错误，不会误报。
+  {
+    const tsxSf = ts.createSourceFile(file, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const jsxNodes: ts.Node[] = [];
+    const walkJsx = (n: ts.Node): void => {
+      if (ts.isJsxElement(n) || ts.isJsxFragment(n) || ts.isJsxSelfClosingElement(n)) jsxNodes.push(n);
+      ts.forEachChild(n, walkJsx);
+    };
+    walkJsx(tsxSf);
+    const tsDiags = (sf as unknown as { parseDiagnostics: readonly { start: number }[] }).parseDiagnostics;
+    for (const jn of jsxNodes) {
+      // 只认有真实闭合标签的 JSX（<div>...</div> / <img /> / <></>）；
+      // `<T>expr` 断言在 TSX 下错误恢复出的 JsxElement 只有空 closingElement（文本为空），跳过
+      const isRealJsx = ts.isJsxSelfClosingElement(jn) || ts.isJsxFragment(jn) ||
+        (ts.isJsxElement(jn) && !!jn.closingElement && jn.closingElement.getText(tsxSf).trim().length > 0);
+      if (!isRealJsx) continue;
+      const s = jn.getStart(tsxSf);
+      const e = jn.getEnd();
+      const relatedError = tsDiags.some((d) => d.start >= s - 1 && d.start <= e + 2);
+      if (!relatedError) continue;
+      add('noJsx', jn);
+    }
+  }
+
   return findings;
 }
 

@@ -325,3 +325,116 @@ test('noLimitedESObject', () => {
   assert.equal(f[0].severity, 'warning');
 });
 
+
+// ---------- 第五轮扩充（12 条，recipe54/84/34/55/149/104/51/114/139/65/90/102）----------
+
+test('noJsx: JSX 表达式（recipe54）', () => {
+  assert.equal(rulesOf('const el = <div>hi</div>;', 'noJsx').length, 1);
+  assert.equal(rulesOf('const el = <><span/></>;', 'noJsx').length, 2); // fragment + 嵌套 self-closing
+  assert.equal(rulesOf('const el = <img src="x" />;', 'noJsx').length, 1);
+  assert.equal(rulesOf('const s = "<div>text</div>";', 'noJsx').length, 0);
+});
+
+test('noWith: with 语句（recipe84）', () => {
+  assert.equal(rulesOf('with (Math) { let r: number = 42; }', 'noWith').length, 1);
+  assert.equal(rulesOf('const x = Math.PI;', 'noWith').length, 0);
+});
+
+test('noInferredGenericParams: 泛型函数无参调用（recipe34）', () => {
+  const src = [
+    'function greet<T>(): T { return \'x\' as T; }',
+    'let z = greet();',                    // 仅靠返回类型推断 -> 报
+    'let ok = greet<string>();',           // 显式指定 -> 不报
+    'function choose<T>(x: T, y: T): T { return x; }',
+    'let c = choose(1, 2);',               // 参数可推断 -> 不报
+    'function noop<T>(): void { }',
+    'noop();',                             // 返回类型不引用 T -> 不报
+  ].join('\n');
+  const f = rulesOf(src, 'noInferredGenericParams');
+  assert.equal(f.length, 1);
+  assert.ok(f[0].snippet.includes('greet()'));
+});
+
+test('noPolymorphicUnops: 一元 + - ~ 作用于字符串字面量（recipe55）', () => {
+  assert.equal(rulesOf('const a = +"5";', 'noPolymorphicUnops').length, 1);
+  assert.equal(rulesOf('const b = -"5";', 'noPolymorphicUnops').length, 1);
+  assert.equal(rulesOf('const c = ~"5";', 'noPolymorphicUnops').length, 1);
+  assert.equal(rulesOf('const d = +5; const e = -5; const f = ~5;', 'noPolymorphicUnops').length, 0);
+});
+
+test('noClassesAsObj: 类被当作对象值（recipe149）', () => {
+  const bad = [
+    'class C { s: string = \'\' }',
+    'let c = C;',              // 类名赋值给变量 -> 报
+    'let d: C = c;',           // 类型上下文 -> 不报（TypeReference）
+    'let e = new C();',        // 实例化 -> 不报
+    'C.prototype = {};',       // 静态/原型访问 -> 不报
+  ].join('\n');
+  const f = rulesOf(bad, 'noClassesAsObj');
+  assert.equal(f.length, 1);
+  assert.ok(f[0].snippet.includes('C'));
+  // 函数实参传类：有意不做（@Type(Task)/AppStorageV2.connect(Setting) 等官方 API 合法传类，静态无法区分）
+  assert.equal(rulesOf('class K { }\nfunction take(x: Object): void { }\ntake(K);', 'noClassesAsObj').length, 0);
+});
+
+test('extendsOnlyClass: interface extends class（recipe104）', () => {
+  const f = rulesOf('class C { state: number = 0 }\ninterface I extends C { select(): void }', 'extendsOnlyClass');
+  assert.equal(f.length, 1);
+  assert.equal(rulesOf('interface A { f(): void }\ninterface B extends A { g(): void }', 'extendsOnlyClass').length, 0);
+});
+
+test('implementsOnlyIface: implements 指定 class（recipe51）', () => {
+  const f = rulesOf('class C { foo(): void {} }\nclass D implements C { foo(): void {} }', 'implementsOnlyIface');
+  assert.equal(f.length, 1);
+  assert.equal(rulesOf('interface I { foo(): void }\nclass D implements I { foo(): void {} }', 'implementsOnlyIface').length, 0);
+});
+
+test('noNsAsObj: namespace 被当作对象值（recipe114）', () => {
+  const f = rulesOf('namespace N { export let x: number = 1 }\nlet m = N;', 'noNsAsObj');
+  assert.equal(f.length, 1);
+  // 命名空间限定访问合法
+  assert.equal(rulesOf('namespace N { export let x: number = 1 }\nN.x = 2;', 'noNsAsObj').length, 0);
+});
+
+test('noFuncProps: 函数上声明属性（recipe139）', () => {
+  const f = rulesOf('function readImage(p: string): void { }\nreadImage.sync = () => { };', 'noFuncProps');
+  assert.equal(f.length, 1);
+  assert.equal(rulesOf('const obj = { sync: 1 };\nobj.sync = 2;', 'noFuncProps').length, 0);
+});
+
+test('instanceofRefTypes: instanceof 左操作数是类型（recipe65）', () => {
+  const f = rulesOf('class X { }\nlet b = X instanceof Object;', 'instanceofRefTypes');
+  assert.equal(f.length, 1);
+  assert.equal(rulesOf('class X { }\nlet c = (new X()) instanceof X;', 'instanceofRefTypes').length, 0);
+});
+
+test('noImplicitReturnTypes: return 调用返回类型省略的函数（recipe90）', () => {
+  const bad = [
+    'function g(x: number): number { return x; }',  // 有显式返回类型
+    'function f(x: number) { return g(x); }',       // f 无返回类型且调用有类型的 g -> 不报
+    'function h(x: number) { return x; }',          // 无返回类型
+    'function k(x: number) { return h(x); }',       // 调用无返回类型的 h -> 报
+  ].join('\n');
+  const f = rulesOf(bad, 'noImplicitReturnTypes');
+  assert.equal(f.length, 1);
+  assert.ok(f[0].snippet.includes('return h(x)'));
+  // 被调用函数有返回类型 -> 不报
+  assert.equal(rulesOf('function g(x: number): number { return x; }\nfunction f(x: number) { return g(x); }', 'noImplicitReturnTypes').length, 0);
+});
+
+test('noExtendSameProp: interface 继承多个同名方法接口（recipe102）', () => {
+  const bad = [
+    'interface Mover { getStatus(): number }',
+    'interface Shaker { getStatus(): number }',
+    'interface MoverShaker extends Mover, Shaker { }',
+  ].join('\n');
+  const f = rulesOf(bad, 'noExtendSameProp');
+  assert.equal(f.length, 1);
+  // 无同名方法 -> 不报
+  const ok = [
+    'interface A { f(): void }',
+    'interface B { g(): void }',
+    'interface AB extends A, B { }',
+  ].join('\n');
+  assert.equal(rulesOf(ok, 'noExtendSameProp').length, 0);
+});

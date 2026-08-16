@@ -7,6 +7,14 @@
 
 面向鸿蒙（HarmonyOS）ArkTS 开发者的痛点解决方案集合。全部工具为本地 CLI，不依赖 DevEco Studio，可直接对工程文件做转换、扫描、修复。生成/修复的结果严格贴合 ArkTS 语法限制（无 any、无任意联合、对象字面量必须显式声明类型等）。
 
+> **English** · A local CLI toolkit for HarmonyOS ArkTS developers — no DevEco Studio required.
+> - `json2ts`: JSON → ArkTS type declarations (interface/class), ArkTS-constraint-safe
+> - `check`: scan `.ets` for ArkTS-incompatible syntax (77 rules, each sourced from official docs) with `--fix` auto-repair
+> - `template`: generate page/component/model/state/dialog boilerplate
+> - `resource`: verify `$r()` references, detect unused resources, generate `R.ets` constants
+> - `migrate`: migrate deprecated `@ohos.*` imports to `@kit.*`
+> - CI-ready: `npx arktsup check src/main/ets` exits non-zero on errors
+
 > 质量保障：质检过程与证据见 [docs/QUALITY-REPORT.md](docs/QUALITY-REPORT.md)，独立评审报告见 [docs/QUALITY-REVIEW-REPORT.md](docs/QUALITY-REVIEW-REPORT.md)，规则溯源见 [docs/RULES.md](docs/RULES.md)，ArkTS 避坑清单见 [docs/ARKTS-PITFALLS.md](docs/ARKTS-PITFALLS.md)。发布流程见 [docs/RELEASE.md](docs/RELEASE.md)，CI 接入见 [docs/CI-INTEGRATION.md](docs/CI-INTEGRATION.md)。
 
 ## 已包含的工具
@@ -31,6 +39,21 @@ npm link                      # 全局可用 arktsup
 ```
 
 要求 Node.js >= 18。
+
+## 快速上手（5 分钟）
+
+```bash
+npx arktsup --version
+bash examples/demo.sh    # 一键体验全部 5 个工具（克隆本仓库后）
+
+# 典型工作流
+npx arktsup json2ts api/user.json --name User --out src/model/User.ets   # 接口 JSON -> 类型
+npx arktsup check src/main/ets --min-severity error                      # 提交前严格检查
+npx arktsup migrate src/main/ets --dry-run                               # 废弃 API 迁移报告
+npx arktsup resource check src/main/resources --i18n                     # 资源引用/多语言检查
+```
+
+接入 CI / pre-commit 见 [docs/CI-INTEGRATION.md](docs/CI-INTEGRATION.md) 与 `scripts/install-hook.sh`。
 
 ## json2ts — JSON 转 ArkTS 类型
 
@@ -86,7 +109,7 @@ arktsup check src/main/ets --fix
 
 ### 已覆盖规则
 
-共 65 条规则，全部对照官方文档逐条核验（来源与证据见 [docs/RULES.md](docs/RULES.md)），
+共 77 条规则，全部对照官方文档逐条核验（来源与证据见 [docs/RULES.md](docs/RULES.md)），
 并在 3327 个官方示例文件上验证过误报率（错误级误报 1/3327，为 NDK 互操作边界案例）。
 
 | 规则 | 级别 | 说明 |
@@ -135,8 +158,21 @@ arktsup check src/main/ets --fix
 | noMisplacedImports / noLimitedThrow | error | import 位置/throw 限制（recipe150/87） |
 | noDeclMerging / noEnumMerging / uniqueNames | error | 声明合并/枚举合并/类型名唯一（recipe103/113/4） |
 | noLimitedESObject | warning | ESObject 使用受限（recipe151） |
+| noJsx | error | 不支持 JSX（recipe54；TSX 双解析，不与 <T>expr 断言混淆） |
+| noWith | error | 不支持 with 语句（recipe84） |
+| noInferredGenericParams | error | 泛型函数无参调用仅靠返回类型推断（recipe34，保守子集） |
+| noPolymorphicUnops | error | 一元 + - ~ 作用于字符串字面量（recipe55，保守子集） |
+| noClassesAsObj | error | 类被当作对象值，如 let c = C（recipe149） |
+| extendsOnlyClass | error | interface extends class（recipe104） |
+| implementsOnlyIface | error | implements 指定 class（recipe51） |
+| noNsAsObj | error | namespace 名用作值，如 let m = N（recipe114；限定访问 N.x 合法） |
+| noFuncProps | error | 在函数上声明属性（recipe139） |
+| instanceofRefTypes | error | instanceof 左操作数是类型（recipe65） |
+| noImplicitReturnTypes | error | return 调用返回类型省略的函数（recipe90） |
+| noExtendSameProp | error | interface 继承多个同名方法接口（recipe102） |
 
 **有意不做检查**（都有官方证据，详见 RULES.md）：Function 类型、元组类型、任意联合类型（如 string \| number）、字符串键属性名。
+需完整类型检查器的 recipe30（structural typing）/ recipe147（.ts 依赖 .ets）与编译器整体严格性 recipe145 亦暂不实现。
 
 ## template — 样板代码生成器
 

@@ -84,7 +84,21 @@
 | noEnumMerging | arkts-no-enum-merging | error | recipe113（同文件重复 enum） |
 | uniqueNames | arkts-unique-names | error | recipe4（类型名唯一；**不查变量/函数名**——ArkTS struct 关键字会让 TS 解析器产生错误恢复 AST，变量级检查会误报） |
 | noLimitedESObject | arkts-limited-esobj | warning | recipe151 |
-| （未实现）structural typing / decl merging 跨文件 / extends-only-class 等 | - | - | 需要完整类型检查器（TypeChecker），超出纯 AST 扫描范围，见 recipe 列表 |
+| noJsx | arkts-no-jsx | error | recipe54（TSX 双解析：TS 模式在 JSX 区域有解析错误才报，避免与 <T>expr 断言混淆） |
+| noWith | arkts-no-with | error | recipe84 |
+| noInferredGenericParams | arkts-no-inferred-generic-params | error | recipe34（保守子集：本文件泛型函数无参调用且返回类型引用类型参数） |
+| noPolymorphicUnops | arkts-no-polymorphic-unops | error | recipe55（保守子集：一元 + - ~ 作用于字符串字面量） |
+| noClassesAsObj | arkts-no-classes-as-obj | error | recipe149（文件内符号表，只报明确值上下文） |
+| extendsOnlyClass | arkts-extends-only-class | error | recipe104（文件内符号表：interface extends 本文件 class） |
+| implementsOnlyIface | arkts-implements-only-iface | error | recipe51（文件内符号表：implements 本文件 class） |
+| noNsAsObj | arkts-no-ns-as-obj | error | recipe114（文件内符号表：namespace 名用作值；限定访问合法） |
+| noFuncProps | arkts-no-func-props | error | recipe139（文件内符号表：对函数名赋值属性） |
+| instanceofRefTypes | arkts-instanceof-ref-types | error | recipe65（instanceof 左操作数直接是本文件类名） |
+| noImplicitReturnTypes | arkts-no-implicit-return-types | error | recipe90（return 调用返回类型省略的本文件函数） |
+| noExtendSameProp | arkts-no-extend-same-prop | error | recipe102（interface extends 多个含同名方法的接口） |
+| （未实现）structural typing | - | - | recipe30 需完整类型检查器（TypeChecker）判断类型结构等价，超出纯 AST 扫描范围 |
+| （未实现）no-ts-deps | - | - | recipe147 需目录级跨文件 import 图分析（.ts 依赖 .ets），check 为单文件扫描 |
+| （有意不做）strict-typing | - | - | recipe145 是编译器整体严格性要求（noImplicitReturns 等），非单一可查规则；相关规则见 recipe8/146 |
 
 > propsByIndex 降级为 **warning** 的原因：recipe29 明确豁免 Record / Map / 枚举 / 类型化数组的索引访问，
 > 而静态检测无法分辨索引对象的类型。warning 不阻塞 CI，仅提示人工确认。
@@ -119,5 +133,7 @@
 ## 校验日期与方法
 
 - 2026-07（本会话）：逐条对照迁移指南原文与 ets2panda recipe 文件核对。
+- 2026-08-16（P1-5 扩充）：规则 65 → 77 条，补齐 recipe54/84/34/55/149/104/51/114/139/65/90/102，
+  全部以 ets2panda 官方 recipe 原文为准（recipe 清单经 GitHub API 拉取比对，80 个 recipe 全覆盖/已记录状态）。
 - 方法：拉取 openharmony/docs 迁移指南原始 markdown + 稀疏克隆 arkcompiler_ets_frontend 的 linter/docs/rules 目录（80 个 recipe）。
 - 注意：recipe 与指南以 master 分支为准，API 版本演进可能调整规则，使用前可复查上述链接。

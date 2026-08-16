@@ -4,7 +4,7 @@
 结论先行：**工具的核心规则经官方文档逐条核验、在真实代码上验证过误报率、并修正了多处置自己于死地的错误判断。**
 
 > **状态更新（2026-08-16）**：本文为质检过程的历史记录，文中数字为当时快照。
-> 当前（以 `npm test` 与 docs/RULES.md 为准）：**测试 81 个全绿，规则 65 条**，
+> 当前（以 `npm test` 与 docs/RULES.md 为准）：**测试 93 个全绿，规则 77 条**，
 > 社区工程基线 **5/5 达成**，官方 samples 错误级误报 1/3327。
 
 ## 1. 规则准确性：逐条对照官方文档
@@ -57,6 +57,23 @@
 > 1. export default x as T 被误判为 export =（TS AST 同节点类型）——已用 isExportEquals 区分
 > 2. this.controller.loaded = () => ... 回调字段赋值被误判为方法重赋值——该方法需类型信息，降级为 warning
 > 基线目标：累计 ≥5 个非官方社区工程（**5/5 达成**），错误级误报率 < 0.5%（实际 0%）。
+
+## 3.6 规则扩充回归（2026-08-16，P1-5）
+
+规则 65 → 77（新增 recipe54/84/34/55/149/104/51/114/139/65/90/102 共 12 条）。回归方法：
+sparse 克隆官方 applications_app_samples（master，6995 个 .ets）→ `--exclude test,ohosTest` 剔除测试模板后 **4585 个纯示例文件**：
+
+- **12 条新规则：错误级误报 0 处**（noJsx / noClassesAsObj / noImplicitReturnTypes 等）
+- 老规则命中 418 处均为**真阳性**（官方仓库含历史代码：constructor 参数属性 54、any 49、无类型字面量 46、逗号 45 等）
+- 过程中修复的 4 个误报源（诚实记录）：
+  1. noRequire 误报 ArkTS lazy import 新特性（`import lazy { x }`）——按 AST 形态排除
+  2. noJsx 误报 `<T>expr` 断言（TSX 错误恢复出空闭合标签）——要求闭合标签文本非空
+  3. noClassesAsObj 误报函数实参传类（`@Type(Task)`、`AppStorageV2.connect(Setting)` 官方 API 合法）——移除实参场景
+  4. noClassesAsObj 误报 struct 错误恢复下的 `Promise<C>`（被拆成 `<`/`>` 比较）——BinaryExpression 只认 `=` 赋值
+- noImplicitReturnTypes 静态无法达到 ets2panda 精度（官方 sample `return genRsaKeyPairSpec(...)` 合法），**降级 warning**
+- 社区工程复测：open_neteasy_cloud(10 错误)/interview-handbook-project(0)/class-schedule(0) 与历史记录一致；
+  harmonyos-tutorial(604 文件) 命中 250 处全部为旧测试模板与旧代码（真阳性）
+- 回归脚本：`scripts/regress-samples.sh`（prepare/run 一键）
 
 ## 4. 独立评审
 
