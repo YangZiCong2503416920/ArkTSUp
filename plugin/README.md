@@ -8,6 +8,10 @@
 
 [ArkTSUp](https://github.com/YangZiCong2503416920/ArkTSUp) 的 VS Code 插件：在编辑器里直接做 ArkTS 严格语法检查与 JSON→类型生成。
 
+> **English**: The VS Code extension of [ArkTSUp](https://github.com/YangZiCong2503416920/ArkTSUp) — run ArkTS strict-syntax checks and generate ArkTS types from JSON right inside the editor, powered by the `arktsup` CLI.
+>
+> Features: auto-check `.ets` files on save (500 ms debounce) with live Problems-panel diagnostics · check the whole workspace or the active file · generate ArkTS interfaces from clipboard JSON · migrate deprecated `@ohos.*` imports to `@kit.*` (dry-run report + one-click fix) · verify `$r` resource references.
+
 ## 功能
 
 - **保存自动检查** — 保存 .ets 文件自动运行检查（防抖 500ms），问题实时显示在 Problems 面板

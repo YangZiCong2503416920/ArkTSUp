@@ -93,11 +93,28 @@ git add plugin/package.json plugin/package-lock.json && git commit -m "chore(plu
 git tag vscode-v0.2.1 && git push origin main --tags
 ```
 
-GitHub Actions 自动：构建根 CLI → 编译插件 → `vsce publish --skip-duplicate`（已发布的版本自动跳过）。
-两种凭据任选其一（推荐 Entra ID，PAT 2026-12-01 后失效）：
+GitHub Actions 自动：构建根 CLI → 编译插件 → 用配置好的凭据 `vsce publish --skip-duplicate`（已发布的版本自动跳过）。
+**两种凭据任选其一**（推荐 A；都没配置时 workflow 会跳过发布并提示，不会报红）：
 
-- **Entra ID（官方长期方案，无需 PAT）**：按 [官方文档](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) 配置 Azure DevOps 服务连接（Workload Identity Federation）+ Azure 托管身份 + 发布者成员（Contributor），CI 中 `vsce publish --azure-credential`（需 vsce ≥ 2.26.1）
-- **PAT（临时）**：生成 [PAT](https://marketplace.visualstudio.com/manage/publishers/yanceecha/pat)（Scopes: Marketplace → Manage）→ 写入 GitHub Secrets `VSCE_PAT`
+#### 2.4-A Entra ID（官方长期方案，无需 PAT，推荐）
+
+按 [官方文档](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) 配置，流程概览：
+
+1. **Azure DevOps 侧**：Project Settings → Service Connections → New → Azure Resource Manager → **Workload Identity Federation (manual)**，保存草稿待填
+2. **Azure 侧**：创建 user-assigned managed identity，记录 Client ID / Tenant ID / Subscription
+3. **交换值**：把 Azure DevOps 的 issuer/subject 填进托管身份的 Federated credentials；把 Client ID/Tenant ID/Subscription 填回服务连接 → Verify and save
+4. **授权发布**：在 Marketplace 发布者 `yanceecha` 的成员里加入该托管身份（用其 resource ID），角色 **Contributor**
+5. **GitHub Secrets**：仓库 Settings → Secrets and variables → Actions → 新增三个：
+   - `AZURE_CLIENT_ID` = 托管身份 Client ID
+   - `AZURE_TENANT_ID` = 租户 ID
+   - `AZURE_SUBSCRIPTION_ID` = 订阅 ID
+
+CI 中自动 `azure/login@v2`（OIDC）→ `vsce publish --azure-credential`（需 vsce ≥ 2.26.1）。
+
+#### 2.4-B PAT（2026-12-01 被 Azure DevOps 停用前仍可用）
+
+1. 生成 [PAT](https://marketplace.visualstudio.com/manage/publishers/yanceecha/pat)：Organization: All accessible organizations，Scopes: **Marketplace → Manage**
+2. GitHub Secrets 新增 `VSCE_PAT`，值粘贴 PAT
 
 ### 2.5 本地安装（不上架时）
 
@@ -121,3 +138,10 @@ VS Code 扩展面板 → ⋯ → 从 VSIX 安装 → 选择 `plugin/arktsup-vsco
 | 0.1.5 | 2026-08-15 | check --fix 增加 angleCast、resource check --i18n 多语言键覆盖 |
 | 0.1.6 | 2026-08-15 | check 规则扩至 61 条、.arktsuprc 配置、migrate 103 模块、避坑清单 |
 | 0.1.7 | 2026-08-15 | check 规则扩至 65 条（decl/enum merging、uniqueNames、ESObject） |
+
+### VS Code 插件版本历史
+
+| 版本 | 日期 | 说明 |
+| --- | --- | --- |
+| 0.2.0 | 2026-08-16 | 上架准备：修复打包布局（main 由 tsc 直出）、自包含运行时依赖、图标/徽章/元数据 |
+| 0.2.1 | 2026-08-16 | 首个 Marketplace 发布版本（tag: vscode-v0.2.1） |
