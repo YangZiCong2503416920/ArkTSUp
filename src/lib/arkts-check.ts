@@ -738,12 +738,21 @@ export function scanSource(file: string, sourceText: string, minSeverity: Severi
   /** import 必须在其他语句之前 */
   function checkMisplacedImports(): void {
     let seenNonImport = false;
+    let inLazyImport = false; // ArkTS lazy import 的错误恢复碎片（from / 'module';）不视为语句
     for (const stmt of sf.statements) {
       if (ts.isImportDeclaration(stmt)) {
-        if (seenNonImport) add('noMisplacedImports', stmt);
-      } else {
-        seenNonImport = true;
+        if (seenNonImport && !inLazyImport) add('noMisplacedImports', stmt);
+        inLazyImport = false;
+        continue;
       }
+      // `import lazy { x } from '...'`：TS 解析为 ImportEqualsDeclaration + 错误恢复碎片
+      if (ts.isImportEqualsDeclaration(stmt) && stmt.name.text === 'lazy') {
+        inLazyImport = true;
+        continue;
+      }
+      if (inLazyImport && (ts.isExpressionStatement(stmt) || ts.isBlock(stmt))) continue; // 碎片
+      inLazyImport = false;
+      seenNonImport = true;
     }
   }
 

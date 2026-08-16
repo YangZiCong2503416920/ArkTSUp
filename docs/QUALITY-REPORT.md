@@ -75,6 +75,25 @@ sparse 克隆官方 applications_app_samples（master，6995 个 .ets）→ `--e
   harmonyos-tutorial(604 文件) 命中 250 处全部为旧测试模板与旧代码（真阳性）
 - 回归脚本：`scripts/regress-samples.sh`（prepare/run 一键）
 
+## 3.7 真实工程基线扩充（2026-08-16，P3 + 社区基线 10+）
+
+新增 **4 个 OpenHarmony 官方系统应用**（生产级代码，sparse 克隆 master）与社区工程复测：
+
+| 工程 | .ets | 错误 | 说明 |
+| --- | --- | --- | --- |
+| applications_settings（系统设置） | 1725 | 164 | 全部真阳性（解构 43/参数解构 45/逗号 37/ns 语句 26） |
+| applications_mms（短信） | 63 | 307 | 真阳性（globalThis 94/any 51/无类型字面量 36；14 处 @ts-ignore 佐证官方自知违规） |
+| applications_contacts（联系人） | 175 | 115 | 真阳性（globalThis 66/any 28/stdlib 15） |
+| applications_photos（图库） | 131 | 18 | 真阳性（函数表达式/独立 this 等） |
+| harmonyos-tutorial（教程，社区） | 604 | 250 | 真阳性（旧测试模板 function()/any） |
+| open_neteasy_cloud / interview-handbook / class-schedule / SepWeather | 158 | 10 | 与历史记录一致，0 误报 |
+| **合计** | **2869** | **864** | **12 条新规则零误报；老规则命中全部为真阳性** |
+
+> 过程中修复的误报：**noMisplacedImports 误报 ArkTS lazy import**（`import lazy displaySync from '...'` 被 TS
+> 解析为 ImportEqualsDeclaration + 错误恢复碎片，碎片被当作普通语句触发 misplaced）——已跳过 lazy import 碎片。
+> noGlobalThis 保持 error（对照 recipe137 原文：globalThis 明确不支持）；系统应用大量命中属官方代码未过 linter，非本工具误报。
+> 基线达成：**9 个独立真实工程 + 官方 samples 4585 文件**，新规则误报率 0%。
+
 ## 4. 独立评审
 
 启动了一个全新上下文的子代理做独立代码审查（要求只报问题不表扬），但其运行超过 40 分钟未产出，已中止。
