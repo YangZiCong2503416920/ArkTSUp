@@ -94,7 +94,7 @@
 | noNsAsObj | arkts-no-ns-as-obj | error | recipe114（文件内符号表：namespace 名用作值；限定访问合法） |
 | noFuncProps | arkts-no-func-props | error | recipe139（文件内符号表：对函数名赋值属性） |
 | instanceofRefTypes | arkts-instanceof-ref-types | error | recipe65（instanceof 左操作数直接是本文件类名） |
-| noImplicitReturnTypes | arkts-no-implicit-return-types | error | recipe90（return 调用返回类型省略的本文件函数） |
+| noImplicitReturnTypes | arkts-no-implicit-return-types | warning | recipe90（return 调用返回类型省略的本文件函数；静态无法达到 ets2panda 精度，官方 sample 存在合法反例，故降级 warning） |
 | noExtendSameProp | arkts-no-extend-same-prop | error | recipe102（interface extends 多个含同名方法的接口） |
 | （未实现）structural typing | - | - | recipe30 需完整类型检查器（TypeChecker）判断类型结构等价，超出纯 AST 扫描范围 |
 | （未实现）no-ts-deps | - | - | recipe147 需目录级跨文件 import 图分析（.ts 依赖 .ets），check 为单文件扫描 |

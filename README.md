@@ -168,7 +168,7 @@ arktsup check src/main/ets --fix
 | noNsAsObj | error | namespace 名用作值，如 let m = N（recipe114；限定访问 N.x 合法） |
 | noFuncProps | error | 在函数上声明属性（recipe139） |
 | instanceofRefTypes | error | instanceof 左操作数是类型（recipe65） |
-| noImplicitReturnTypes | error | return 调用返回类型省略的函数（recipe90） |
+| noImplicitReturnTypes | warning | return 调用返回类型省略的函数（recipe90；静态推断存在边界误报，故 warning） |
 | noExtendSameProp | error | interface 继承多个同名方法接口（recipe102） |
 
 **有意不做检查**（都有官方证据，详见 RULES.md）：Function 类型、元组类型、任意联合类型（如 string \| number）、字符串键属性名。
