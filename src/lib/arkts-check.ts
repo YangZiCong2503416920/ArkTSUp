@@ -542,7 +542,13 @@ const REFLECT_BANNED = new Set([
 ]);
 
 export function scanSource(file: string, sourceText: string, minSeverity: Severity = 'warning'): Finding[] {
-  const sf = ts.createSourceFile(file, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  let sf: ts.SourceFile;
+  try {
+    sf = ts.createSourceFile(file, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  } catch {
+    // TS 解析器对极端畸形输入会抛内部断言（Debug Failure），跳过该文件而不是让 CLI 崩溃
+    return [];
+  }
   const findings: Finding[] = [];
   const add = (rule: string, node: ts.Node) => {
     const meta = RULE_INFO[rule];
@@ -1176,7 +1182,12 @@ export function scanSource(file: string, sourceText: string, minSeverity: Severi
   // 因此用 TSX 模式单独解析；只有 TS 模式在 JSX 区域内有解析错误才判定为真 JSX——
   // 合法断言（<T>expr）、泛型箭头、泛型调用（foo<Bar>()）在 TS 模式下均无错误，不会误报。
   {
-    const tsxSf = ts.createSourceFile(file, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    let tsxSf: ts.SourceFile;
+    try {
+      tsxSf = ts.createSourceFile(file, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    } catch {
+      tsxSf = sf;
+    }
     const jsxNodes: ts.Node[] = [];
     const walkJsx = (n: ts.Node): void => {
       if (ts.isJsxElement(n) || ts.isJsxFragment(n) || ts.isJsxSelfClosingElement(n)) jsxNodes.push(n);
@@ -1230,7 +1241,12 @@ export function scanDirectory(root: string, options: CheckOptions = {}): ScanRep
  * 注意：这只是机械替换，最终仍需手动改成具体类型。
  */
 export function fixAnyInSource(sourceText: string): { text: string; fixed: number } {
-  const sf = ts.createSourceFile('fix.ets', sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  let sf: ts.SourceFile;
+  try {
+    sf = ts.createSourceFile('fix.ets', sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  } catch {
+    return { text: sourceText, fixed: 0 };
+  }
   const positions: { start: number; end: number; kind: 'any' | 'unknown' }[] = [];
   function walk(n: ts.Node): void {
     if (n.kind === ts.SyntaxKind.AnyKeyword || n.kind === ts.SyntaxKind.UnknownKeyword) {
@@ -1269,7 +1285,12 @@ export interface FixSummary {
 export function applyAutoFixes(sourceText: string): FixSummary {
   const anyRes = fixAnyInSource(sourceText);
   const byRule: Record<string, number> = { noAny: anyRes.fixed };
-  const sf = ts.createSourceFile('fix.ets', anyRes.text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  let sf: ts.SourceFile;
+  try {
+    sf = ts.createSourceFile('fix.ets', anyRes.text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  } catch {
+    return { text: anyRes.text, total: anyRes.fixed, byRule };
+  }
   const varPositions: { start: number; end: number }[] = [];
   const castReplacements: { start: number; end: number; text: string }[] = [];
   function walk(n: ts.Node): void {

@@ -1,0 +1,21 @@
+name: Track official recipes (P3-1)
+
+# 每周一 09:00 UTC 检查官方 ets2panda recipe 清单是否新增规则
+# 官方新增 recipe 且 RULES.md 未覆盖 -> workflow 失败（Actions 通知）
+# 手动触发: Actions -> Track official recipes -> Run workflow
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: 对比官方 recipe 清单与 docs/RULES.md 覆盖
+        run: node scripts/track-recipes.js

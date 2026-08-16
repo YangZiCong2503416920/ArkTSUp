@@ -39,7 +39,7 @@
 | objLiteralAsType | arkts-no-obj-literals-as-types | error | 迁移指南 §1688；recipe40 |
 | deleteOp | arkts-no-delete | error | recipe59 |
 | typeQuery | arkts-no-type-query | error | recipe60 |
-| angleCast | arkts-as-casts | error | 迁移指南 §2242 |
+| angleCast | arkts-as-casts | error | 迁移指南 §2242；recipe53 |
 | nonInferrableArray | arkts-no-noninferrable-arr-literals | error | 迁移指南 §608；recipe43 |
 | nonIdentifierProps | arkts-identifiers-as-prop-names | error | 迁移指南 §226；recipe1（**只查数字键**：字符串字面量属性名是官方明确的例外） |
 | inOperator | arkts-no-in | error | recipe66 |
@@ -135,5 +135,7 @@
 - 2026-07（本会话）：逐条对照迁移指南原文与 ets2panda recipe 文件核对。
 - 2026-08-16（P1-5 扩充）：规则 65 → 77 条，补齐 recipe54/84/34/55/149/104/51/114/139/65/90/102，
   全部以 ets2panda 官方 recipe 原文为准（recipe 清单经 GitHub API 拉取比对，80 个 recipe 全覆盖/已记录状态）。
+- 2026-08-16（P3）：新增 `scripts/track-recipes.js` 自动追踪官方 recipe 清单变更（每周 CI），
+  fuzz 测试（test/fuzz.test.ts）抓出并修复 TS 解析器对畸形输入的崩溃（createSourceFile 容错）。
 - 方法：拉取 openharmony/docs 迁移指南原始 markdown + 稀疏克隆 arkcompiler_ets_frontend 的 linter/docs/rules 目录（80 个 recipe）。
 - 注意：recipe 与指南以 master 分支为准，API 版本演进可能调整规则，使用前可复查上述链接。

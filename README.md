@@ -297,8 +297,14 @@ npm test        # 构建 + 单元测试（node:test）
 
 - [ ] **VS Code 插件上架**：`plugin/arktsup-vscode.vsix`（v0.2.1）上传 Marketplace（网页上传无需 PAT，见 docs/RELEASE.md）
 - [ ] **DevEco Studio 插件**：骨架在 `deveco-plugin/`（未编译验证），按 docs/DEVECO-PLUGIN.md 在 DevEco 机器上构建
-- [ ] **规则覆盖 65 → 80 recipe 全量** + 语义分析升级（propsByIndex 豁免 / untypedObjectLiteral 上下文 / utilityType 自定义类型）
-- [ ] **官方 samples 回归脚本**：一键重跑 3327 官方示例的误报基线
+- [ ] **语义分析升级（TypeChecker）**：propsByIndex 豁免 / untypedObjectLiteral 上下文 / utilityType 自定义类型 / structural typing（recipe30）
+- [ ] **recipe147（.ts 依赖 .ets）**：目录级跨文件 import 图分析
+
+### ✅ 已补充（P3）
+
+- [x] **官方 recipe 演进追踪**：`scripts/track-recipes.js` + 每周 CI（track-recipes.yml），官方新增规则自动告警
+- [x] **fuzz / 属性测试**：`test/fuzz.test.ts`（随机代码 + 真实代码变异 600 次，抓出 TS 解析器畸形输入崩溃并已容错）
+- [x] **官方 samples 回归脚本**：`scripts/regress-samples.sh`（4585 文件基线，新规则 0 误报）
 
 ## License
 
