@@ -40,24 +40,30 @@ npm run package    # 产出 .vsix
 
 ## Marketplace 上架
 
-上架需在 https://marketplace.visualstudio.com/manage 创建发布者 **yanceecha**，并准备 PAT（`Marketplace: Manage` 权限）。详见 [docs/RELEASE.md](../docs/RELEASE.md#2-vs-code-插件marketplace-上架)。
+**无需 PAT**：在 https://marketplace.visualstudio.com/manage 用微软账号登录并创建发布者 **yanceecha**，
+然后 `npm run package` 产出的 `arktsup-vscode.vsix` 直接在管理页 **New Extension 上传**即可。
+详见 [docs/RELEASE.md](https://github.com/YangZiCong2503416920/ArkTSUp/blob/main/docs/RELEASE.md#2-vs-code-插件marketplace-上架)。
 
-- **自动发布（推荐）**：把 PAT 写入仓库 Secret `VSCE_PAT` 后，打 `vscode-v*` 标签即触发 [publish-vscode.yml](../.github/workflows/publish-vscode.yml) 自动上架：
+- **网页上传（推荐，无需任何令牌）**：
+
+  ```bash
+  cd plugin
+  npm run package   # 产出 plugin/arktsup-vscode.vsix
+  ```
+
+  打开 https://marketplace.visualstudio.com/manage → 登录发布者 → New Extension → 上传该 .vsix。
+
+- **CI 自动发布（可选）**：配置发布凭据后，打 `vscode-v*` 标签即触发 [publish-vscode.yml](https://github.com/YangZiCong2503416920/ArkTSUp/blob/main/.github/workflows/publish-vscode.yml)：
 
   ```bash
   cd plugin && npm version patch
   git tag vscode-v0.2.1 && git push origin main --tags
   ```
 
-- **手动发布**：
+  凭据二选一：Entra ID 托管身份（官方长期方案，`vsce publish --azure-credential`，无需 PAT）或
+  Secret `VSCE_PAT`（PAT 已于 2026-12-01 被 Azure DevOps 停用）。
 
-  ```bash
-  cd plugin
-  npm run package          # 产出 arktsup-vscode.vsix
-  VSCE_PAT=<你的PAT> npx --yes @vscode/vsce publish --packagePath arktsup-vscode.vsix --skip-duplicate
-  ```
-
-> .vscodeignore 已配置，发布包只含入口与 arktsup lib（23 个文件，~58KB），不含源码/测试。
+> .vscodeignore 已配置，发布包只含入口与 arktsup lib（含 typescript/json5 运行时依赖），不含源码/测试。
 > 徽章（版本/下载/评分）会在首次发布后自动点亮。
 
 ## 使用示例

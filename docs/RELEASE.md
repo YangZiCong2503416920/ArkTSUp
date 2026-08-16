@@ -63,14 +63,25 @@ npx @vscode/vsce ls  # 查看 .vsix 内容（应只有 package.json/icon/README/
 
 ### 2.2 上架前置（只需做一次，需要你的微软账号）
 
-1. **创建发布者**：https://marketplace.visualstudio.com/manage → 用微软账号登录 → 创建发布者，名称必须与 `plugin/package.json` 的 `publisher` 一致：`yanceecha`
-2. **生成 PAT**：https://marketplace.visualstudio.com/manage/publishers/yanceecha/pat
-   - Organization: All accessible organizations
-   - Scopes: **Marketplace → Manage**
-   - 复制生成的 PAT（仅显示一次）
-3. **把 PAT 写入 GitHub Secrets**：仓库 Settings → Secrets and variables → Actions → New repository secret，名称 **`VSCE_PAT`**，值粘贴 PAT
+**创建发布者（不需要 PAT）**：https://marketplace.visualstudio.com/manage → 用微软账号登录 →
+左侧 **Create publisher** → ID 填 `yanceecha`（必须与 `plugin/package.json` 的 `publisher` 一致，创建后不可改）、Name 填展示名（如 `Yanceecha`）→ Create。
 
-### 2.3 自动发布（推荐）
+> 注：`vsce login/publish` 的 PAT 只影响 CLI 发布路径；网页上传（2.3）与 CI（2.4）之外的日常发布完全不需要它。
+> 另外官方已宣布 **Azure DevOps 全局 PAT 将于 2026-12-01 停用**（见
+> [官方文档](https://code.visualstudio.com/api/working-with-extensions/publishing-extension)），长期自动发布请走 2.4 的 Entra ID 方案。
+
+### 2.3 手动上架（推荐，无需 PAT）
+
+```bash
+cd plugin
+npm run package      # 产出 plugin/arktsup-vscode.vsix（含图标/README/CHANGELOG/自包含 CLI）
+```
+
+打开 https://marketplace.visualstudio.com/manage → 登录发布者 `yanceecha` →
+**New Extension → 上传 `plugin/arktsup-vscode.vsix`**（拖拽即可，无需任何令牌）。
+发布后 5~10 分钟可在 VS Code 与网页市场搜到 `ArkTSUp`。
+
+### 2.4 自动发布（CI，可选）
 
 每次发版打 tag 即自动上架（workflow: `.github/workflows/publish-vscode.yml`）：
 
@@ -82,16 +93,11 @@ git add plugin/package.json plugin/package-lock.json && git commit -m "chore(plu
 git tag vscode-v0.2.1 && git push origin main --tags
 ```
 
-GitHub Actions 自动：构建根 CLI → 编译插件 → `vsce publish --skip-duplicate`。
-已发布的版本会自动跳过，CI 保持绿。
+GitHub Actions 自动：构建根 CLI → 编译插件 → `vsce publish --skip-duplicate`（已发布的版本自动跳过）。
+两种凭据任选其一（推荐 Entra ID，PAT 2026-12-01 后失效）：
 
-### 2.4 手动发布（备用，本地有 PAT 时）
-
-```bash
-cd plugin
-export VSCE_PAT=<你的 PAT>        # 或先 vsce login yanceecha
-npx --yes @vscode/vsce publish --skip-duplicate
-```
+- **Entra ID（官方长期方案，无需 PAT）**：按 [官方文档](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) 配置 Azure DevOps 服务连接（Workload Identity Federation）+ Azure 托管身份 + 发布者成员（Contributor），CI 中 `vsce publish --azure-credential`（需 vsce ≥ 2.26.1）
+- **PAT（临时）**：生成 [PAT](https://marketplace.visualstudio.com/manage/publishers/yanceecha/pat)（Scopes: Marketplace → Manage）→ 写入 GitHub Secrets `VSCE_PAT`
 
 ### 2.5 本地安装（不上架时）
 

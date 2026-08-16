@@ -1,13 +1,17 @@
 name: Publish VS Code Extension (Marketplace)
 
 # 触发: 推送 vscode-v* 版本标签（如 git tag vscode-v0.2.0 && git push origin vscode-v0.2.0）
-# 原理: vsce publish 使用 GitHub Secret VSCE_PAT（一次性配置）
-# 前置条件(必做一次):
-#   1) 在 https://marketplace.visualstudio.com/manage 创建发布者 yanceecha
-#   2) 生成 PAT（Marketplace: Manage 权限）: https://marketplace.visualstudio.com/manage/publishers/yanceecha/pat
-#   3) 把 PAT 写入仓库 Secrets: Settings -> Secrets and variables -> Actions -> New repository secret
-#      名称必须为 VSCE_PAT
-# 说明: 版本号取 plugin/package.json；--skip-duplicate 保证已发布的版本自动跳过，CI 保持绿。
+# 说明: 本 workflow 需要发布凭据；不上 CI 也可用网页上传（见 docs/RELEASE.md 2.3，无需任何令牌）。
+# 凭据两种方案任选其一（推荐 Entra ID；PAT 已于 2026-12-01 被 Azure DevOps 停用）:
+#   A) Entra ID（官方长期方案，无需 PAT）:
+#      按官方文档配置 Azure DevOps 服务连接(Workload Identity Federation) + Azure 托管身份 +
+#      发布者成员(Contributor)，CI 中用 vsce publish --azure-credential
+#      https://code.visualstudio.com/api/working-with-extensions/publishing-extension
+#   B) PAT（2026-12-01 前仍可用）:
+#      1) 在 https://marketplace.visualstudio.com/manage 创建发布者 yanceecha
+#      2) 生成 PAT（Marketplace: Manage 权限）: https://marketplace.visualstudio.com/manage/publishers/yanceecha/pat
+#      3) 把 PAT 写入仓库 Secrets，名称必须为 VSCE_PAT
+# 版本号取 plugin/package.json；--skip-duplicate 保证已发布的版本自动跳过，CI 保持绿。
 
 on:
   push:
