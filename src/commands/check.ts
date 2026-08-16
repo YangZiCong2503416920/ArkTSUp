@@ -15,6 +15,7 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 import { scanSource, applyAutoFixes, DEFAULT_SKIP, ScanReport, Severity, Finding } from '../lib/arkts-check';
 import { loadConfig, isRuleIgnored } from '../lib/config';
+import { checkApiVersionInSource, detectMinApiVersion } from '../lib/api-check';
 
 const SEV_COLOR: Record<string, string> = {
   error: '\x1b[31m',   // red
@@ -30,6 +31,7 @@ export function runCheck(argv: string[]): number {
   let fix = false;
   let watch = false;
   let staged = false;
+  let apiVersion: number | undefined;
   const extraSkip: string[] = [];
 
   for (let i = 0; i < argv.length; i++) {
@@ -59,6 +61,12 @@ export function runCheck(argv: string[]): number {
       case '--staged':
         staged = true;
         break;
+      case '--api-version': {
+        const v = parseInt(argv[++i], 10);
+        if (Number.isNaN(v) || v < 5) { console.error('错误: --api-version 需要有效 API 版本号（如 10）'); return 2; }
+        apiVersion = v;
+        break;
+      }
       case '-h': case '--help':
         console.log(HELP);
         return 0;
@@ -137,6 +145,7 @@ export function runCheck(argv: string[]): number {
   // ---- 单次检查 ----
   const proc = makeProcessor();
   let report: ScanReport;
+  let scannedFiles: string[] = [];
   if (isFile) {
     let findings: Finding[];
     try {
@@ -146,11 +155,25 @@ export function runCheck(argv: string[]): number {
       return 2;
     }
     report = summarize(findings, 1, config);
+    scannedFiles = [abs];
   } else {
     const { collectEtsFiles } = require('../lib/arkts-check') as typeof import('../lib/arkts-check');
     const files = collectEtsFiles(abs, skip);
+    scannedFiles = files;
     report = runOnFiles(files, proc);
   }
+
+  // ---- API 版本兼容检查（D1）：--api-version 显式指定，或从 module.json5/app.json5 自动探测 ----
+  const minV = apiVersion ?? (isFile ? null : detectMinApiVersion(abs));
+  if (minV !== null && minV !== undefined) {
+    for (const f of scannedFiles) {
+      try {
+        report.findings.push(...checkApiVersionInSource(f, fs.readFileSync(f, 'utf8'), minV, minSeverity));
+      } catch { /* 跳过无法读取的文件 */ }
+    }
+    report = summarize(report.findings, report.filesScanned, config);
+  }
+
   return outputReport(report, proc.getTotalFixed(), format, isRuleIgnored);
 }
 
@@ -269,6 +292,7 @@ const HELP = `arktsup check — 扫描 .ets 源码中的 ArkTS 不兼容写法
   --fix                 自动修复：any->Object、var->let、<T>expr->as T、解构拆分（保守子集）
   --watch               监听目录变更自动重查（Ctrl+C 退出）
   --staged              只检查 git 暂存区的 .ets（配合 pre-commit）
+  --api-version <n>     检查 import 的 @ohos.* 模块是否在最低 API 版本可用（默认自动读 module.json5/app.json5）
   -h, --help            显示帮助
 
 已覆盖规则（全部对照官方文档，详见 docs/RULES.md）:

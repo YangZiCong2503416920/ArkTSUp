@@ -111,6 +111,9 @@ arktsup check src/main/ets --watch
 
 # 只检查 git 暂存区的 .ets（pre-commit 场景，见 scripts/install-hook.sh）
 arktsup check --staged
+
+# API 版本兼容检查：import 的 @ohos.* 模块是否在最低版本可用（不传则自动读 module.json5/app.json5）
+arktsup check src/main/ets --api-version 9
 ```
 
 退出码：存在 error 时返回 1，只有 warning 返回 0。
