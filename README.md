@@ -121,6 +121,9 @@ arktsup check src/main/ets --fix --report arktsup-report.html
 # 目录模式默认开启 TypeChecker 语义增强（propsByIndex 精确豁免/升级、utilityType 自定义类型豁免）
 # 大工程想跳过语义分析（更快）：
 arktsup check src/main/ets --no-semantic
+
+# 目录模式默认增量缓存：文件未变时秒出（缓存到 .arktsup-cache.json，--no-cache 关闭）
+arktsup check src/main/ets
 ```
 
 退出码：存在 error 时返回 1，只有 warning 返回 0。

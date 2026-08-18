@@ -1305,6 +1305,8 @@ export function applyAutoFixes(sourceText: string): FixSummary {
   const varPositions: { start: number; end: number }[] = [];
   const castReplacements: { start: number; end: number; text: string }[] = [];
   const destrReplacements: { start: number; end: number; text: string }[] = [];
+  const elemReplacements: { start: number; end: number; text: string }[] = [];
+  const catchReplacements: { start: number; end: number; text: string }[] = [];
   function walk(n: ts.Node): void {
     if (ts.isVariableDeclarationList(n) && !(n.flags & ts.NodeFlags.BlockScoped)) {
       varPositions.push({ start: n.getStart(sf), end: n.getStart(sf) + 3 });
@@ -1329,6 +1331,25 @@ export function applyAutoFixes(sourceText: string): FixSummary {
       if (r) destrReplacements.push(r);
       return; // 不深入绑定模式内部（绑定元素由替换整体处理；不支持的形态跳过）
     }
+    // 索引访问转点号：obj['key'] -> obj.key（key 为合法标识符且 obj 为简单表达式）
+    if (ts.isElementAccessExpression(n) && ts.isStringLiteral(n.argumentExpression)) {
+      const key = n.argumentExpression.text;
+      if (/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key)) {
+        const objText = n.expression.getText(sf);
+        const simple = ts.isIdentifier(n.expression) || ts.isPropertyAccessExpression(n.expression)
+          || ts.isElementAccessExpression(n.expression) || ts.isParenthesizedExpression(n.expression)
+          || n.expression.kind === ts.SyntaxKind.ThisKeyword;
+        if (simple) {
+          elemReplacements.push({ start: n.getStart(sf), end: n.getEnd(), text: objText + '.' + key });
+        }
+      }
+    }
+    // catch 去类型标注：catch (e: Error) -> catch (e)
+    if (ts.isCatchClause(n) && n.variableDeclaration && n.variableDeclaration.type) {
+      const vd = n.variableDeclaration;
+      const vdType = vd.type;
+      if (vdType) catchReplacements.push({ start: vd.getStart(sf), end: vdType.getEnd(), text: vd.name.getText(sf) });
+    }
     ts.forEachChild(n, walk);
   }
   walk(sf);
@@ -1338,11 +1359,17 @@ export function applyAutoFixes(sourceText: string): FixSummary {
   let fixed = 0;
   const applied: { start: number; end: number; rule: string }[] = [];
   const overlaps = (s: number, e: number): boolean => applied.some((a) => s < a.end && e > a.start);
-  for (const r of destrReplacements.concat(castReplacements).sort((a, b) => b.start - a.start)) {
+  const ruleOf = (r: { start: number; end: number; text: string }): string => {
+    if (destrReplacements.indexOf(r) >= 0) return 'objectDestructuring';
+    if (elemReplacements.indexOf(r) >= 0) return 'propsByIndex';
+    if (catchReplacements.indexOf(r) >= 0) return 'catchWithType';
+    return 'angleCast';
+  };
+  for (const r of destrReplacements.concat(castReplacements, elemReplacements, catchReplacements).sort((a, b) => b.start - a.start)) {
     if (overlaps(r.start, r.end)) continue;
     if (text.slice(r.start, r.end) === r.text) continue;
     text = text.slice(0, r.start) + r.text + text.slice(r.end);
-    applied.push({ start: r.start, end: r.end, rule: destrReplacements.indexOf(r) >= 0 ? 'objectDestructuring' : 'angleCast' });
+    applied.push({ start: r.start, end: r.end, rule: ruleOf(r) });
     fixed++;
   }
   for (const { start, end } of varPositions.sort((a, b) => b.start - a.start)) {

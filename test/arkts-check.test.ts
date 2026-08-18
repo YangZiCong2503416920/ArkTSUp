@@ -468,3 +468,30 @@ test('applyAutoFixes: 解构后 check 不再报 objectDestructuring', () => {
   const findings = scanSource('t.ets', r.text).filter((f) => f.rule === 'objectDestructuring');
   assert.equal(findings.length, 0);
 });
+
+test('applyAutoFixes: 索引访问转点号（D5）', () => {
+  const { applyAutoFixes } = require('../src/lib/arkts-check') as typeof import('../src/lib/arkts-check');
+  let r = applyAutoFixes("const v = obj['key'];");
+  assert.equal(r.text, 'const v = obj.key;');
+  assert.equal(r.byRule.propsByIndex, 1);
+  r = applyAutoFixes("const v2 = this['name'];");
+  assert.equal(r.text, 'const v2 = this.name;');
+  // 非合法标识符键不转
+  assert.equal(applyAutoFixes("const v3 = obj['not-valid'];" ).text, "const v3 = obj['not-valid'];");
+  // 括号表达式安全转换
+  r = applyAutoFixes("const v4 = (a + b)['k'];");
+  assert.equal(r.text, 'const v4 = (a + b).k;');
+  // 与 any 修复共存
+  r = applyAutoFixes("let a: any = 1; const w = obj['a'];");
+  assert.equal(r.text, 'let a: Object = 1; const w = obj.a;');
+  assert.equal(r.byRule.noAny + r.byRule.propsByIndex, 2);
+});
+
+test('applyAutoFixes: catch 去类型标注（D5）', () => {
+  const { applyAutoFixes } = require('../src/lib/arkts-check') as typeof import('../src/lib/arkts-check');
+  const r = applyAutoFixes('try { x() } catch (e: Error) { log(e) }');
+  assert.equal(r.text, 'try { x() } catch (e) { log(e) }');
+  assert.equal(r.byRule.catchWithType, 1);
+  // 无类型标注不动
+  assert.equal(applyAutoFixes('try { x() } catch (e) { log(e) }').text, 'try { x() } catch (e) { log(e) }');
+});

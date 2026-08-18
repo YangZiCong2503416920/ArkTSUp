@@ -18,6 +18,7 @@ import { loadConfig, isRuleIgnored } from '../lib/config';
 import { checkApiVersionInSource, detectMinApiVersion } from '../lib/api-check';
 import { renderHtmlReport, renderJsonReport, FixStats } from '../lib/report';
 import { analyzeSemantics } from '../lib/semantic';
+import { CheckCache, CACHE_FILE, buildFingerprints, countFindings, isCacheFresh, loadCache, saveCache } from '../lib/cache';
 
 const SEV_COLOR: Record<string, string> = {
   error: '\x1b[31m',   // red
@@ -25,6 +26,7 @@ const SEV_COLOR: Record<string, string> = {
   info: '\x1b[36m',    // cyan
 };
 const RESET = '\x1b[0m';
+const TOOL_VERSION: string = (require(path.join(__dirname, '..', '..', '..', 'package.json')) as { version: string }).version;
 
 export function runCheck(argv: string[]): number {
   let target = '.';
@@ -36,6 +38,7 @@ export function runCheck(argv: string[]): number {
   let apiVersion: number | undefined;
   let reportFile: string | undefined;
   let semantic = true;
+  let useCache = true;
   const extraSkip: string[] = [];
 
   for (let i = 0; i < argv.length; i++) {
@@ -76,6 +79,9 @@ export function runCheck(argv: string[]): number {
         break;
       case '--no-semantic':
         semantic = false;
+        break;
+      case '--no-cache':
+        useCache = false;
         break;
       case '-h': case '--help':
         console.log(HELP);
@@ -167,8 +173,10 @@ export function runCheck(argv: string[]): number {
 
   // ---- 单次检查 ----
   const proc = makeProcessor();
-  let report: ScanReport;
+  let report: ScanReport = { findings: [], filesScanned: 0, errors: 0, warnings: 0, infos: 0 };
   let scannedFiles: string[] = [];
+  let cacheHit = false;
+  let cacheFile = '';
   if (isFile) {
     let findings: Finding[];
     try {
@@ -183,7 +191,18 @@ export function runCheck(argv: string[]): number {
     const { collectEtsFiles } = require('../lib/arkts-check') as typeof import('../lib/arkts-check');
     const files = collectEtsFiles(abs, skip);
     scannedFiles = files;
-    report = runOnFiles(files, proc);
+    // ---- 增量缓存（D4）：全部文件未变时复用上次完整结果（含语义），秒出 ----
+    cacheFile = path.join(abs, CACHE_FILE);
+    if (useCache && files.length > 0) {
+      const cached = loadCache(cacheFile, TOOL_VERSION);
+      if (cached && isCacheFresh(cached, files)) {
+        const cnt = countFindings(cached.findings);
+        report = { findings: cached.findings, filesScanned: files.length, errors: cnt.errors, warnings: cnt.warnings, infos: cnt.infos };
+        cacheHit = true;
+        console.error(`[cache] 命中 ${files.length} 个文件，复用上次检查结果（--no-cache 关闭）`);
+      }
+    }
+    if (!cacheHit) report = runOnFiles(files, proc);
   }
 
   // ---- API 版本兼容检查（D1）：--api-version 显式指定，或从 module.json5/app.json5 自动探测 ----
@@ -198,8 +217,8 @@ export function runCheck(argv: string[]): number {
   }
 
   // ---- 语义分析增强（D3）：类型信息精确判定 propsByIndex/untypedObjectLiteral/utilityType ----
-  // 目录模式默认开启；--no-semantic 关闭；watch/staged 因性能/快照语义跳过
-  if (semantic && !isFile && !watch && !staged && scannedFiles.length > 0) {
+  // 目录模式默认开启；--no-semantic 关闭；watch/staged/缓存命中 跳过
+  if (semantic && !isFile && !watch && !staged && !cacheHit && scannedFiles.length > 0) {
     const sem = analyzeSemantics(scannedFiles);
     const exempt = (f: Finding): boolean => {
       const k = f.file + ':' + f.line + ':' + f.column;
@@ -217,6 +236,17 @@ export function runCheck(argv: string[]): number {
     });
     report.findings.push(...sem.propsByIndexErrors);
     report = summarize(report.findings, report.filesScanned, config);
+  }
+
+  // ---- 保存增量缓存（D4）：保存语义后完整结果；--fix 改文件后 mtime 变化自动失效 ----
+  if (useCache && cacheFile && !watch && !staged && !isFile) {
+    const cacheData: CheckCache = {
+      version: 1,
+      toolVersion: TOOL_VERSION,
+      files: buildFingerprints(scannedFiles),
+      findings: report.findings,
+    };
+    saveCache(cacheFile, cacheData);
   }
 
   // ---- 工程迁移报告（D2）：--report <file.html|file.json> ----
@@ -360,6 +390,8 @@ const HELP = `arktsup check — 扫描 .ets 源码中的 ArkTS 不兼容写法
   --staged              只检查 git 暂存区的 .ets（配合 pre-commit）
   --api-version <n>     检查 import 的 @ohos.* 模块是否在最低 API 版本可用（默认自动读 module.json5/app.json5）
   --report <file>       生成 HTML（或 .json）迁移报告：扫描统计 + --fix 修复明细 + 问题表
+  --no-semantic         关闭 TypeChecker 语义分析（大工程更快）
+  --no-cache            关闭增量缓存（目录模式默认缓存到 .arktsup-cache.json）
   -h, --help            显示帮助
 
 已覆盖规则（全部对照官方文档，详见 docs/RULES.md）:
