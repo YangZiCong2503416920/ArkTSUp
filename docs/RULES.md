@@ -123,6 +123,95 @@
 }
 ```
 
+## 规则自定义（D6，v0.9）
+
+`.arktsuprc.json` 支持两层规则自定义。竞品（CodeLinter / oxc-ark / ets2panda）的规则集
+全部封闭，这是 ArkTSUp 的差异化能力（依据见 docs/COMPETITOR-ANALYSIS.md D6）。
+
+### 1. 内置规则级别覆盖 `rules`
+
+```json
+{
+  "rules": { "propsByIndex": "off", "noFuncBind": "error" }
+}
+```
+
+取值 `off | error | warning | info`（默认取内置级别）。`off` 等价于 `ignore.rules`，
+但与 D3 语义升级、D4 缓存、D6 自定义规则统一生效；对自定义规则名同样有效（改自定义规则级别）。
+
+### 2. 声明式自定义规则 `customRules`
+
+每个规则 = 一个 AST 选择器（eslint selector 子集）+ 描述文案：
+
+```json
+{
+  "customRules": [
+    {
+      "name": "noDebugger",
+      "message": "禁止 debugger 语句（调试残留）",
+      "severity": "error",
+      "selector": "DebuggerStatement",
+      "fix": "删除 debugger;"
+    },
+    {
+      "name": "noConsoleLog",
+      "message": "禁止 console.log/debug（调试输出请用 hilog）",
+      "severity": "warning",
+      "selector": "PropertyAccessExpression[text~=/^console\\.(log|debug)$/]",
+      "fix": "改用 hilog.info(...)"
+    }
+  ]
+}
+```
+
+字段：
+
+| 字段 | 必填 | 说明 |
+| --- | --- | --- |
+| name | ✅ | 规则名：唯一，不能与内置规则重名 |
+| message | ✅ | 命中后展示的问题描述 |
+| selector | ✅ | AST 选择器（见下） |
+| severity | - | `error`（默认）\| `warning` \| `info` |
+| fix | - | 修复建议文案（自定义规则暂不自动修复） |
+
+### 选择器语法
+
+```
+selector := compound ( '>' compound )*
+compound := kindName attr*
+attr     := '[' attrName '=' value ']' | '[' attrName '~=' /regex/flags ']'
+```
+
+- **kindName**：TypeScript SyntaxKind 成员名（`CallExpression` / `PropertyAccessExpression`
+  / `Identifier` / `StringLiteral` / `DebuggerStatement` / `PropertyAssignment` …），
+  关键字可用小写别名（`string` / `number` / `any` / `unknown` / `true` / `false` / `null`
+  / `this` / `const` / `let` / `var` / `in` / `as` / `new` / `typeof` …）。
+- **报告点**：最右侧 compound 匹配的节点（位置/片段取自该节点）；
+  每个 `>` 要求左侧 compound 匹配它的直接父节点（祖先链）。
+- **属性**：`name`（节点名：Identifier 文本 / 声明名 / 属性名，字符串键取其文本）、
+  `text`（节点源码文本）、`kind`（SyntaxKind 名）。
+- **运算符**：`=` 相等（值可带引号，如 `[name='str-key']`）；`~=` 正则匹配
+  （值必须是 `/pattern/flags` 字面量）。
+
+示例：
+
+| 想做的检查 | selector |
+| --- | --- |
+| 禁止 debugger | `DebuggerStatement` |
+| 禁止 `alert(...)` 调用 | `CallExpression > Identifier[name=alert]` |
+| 禁止 `console.log/debug` | `PropertyAccessExpression[text~=/^console\\.(log|debug)$/]` |
+| 禁止下划线开头的属性名 | `PropertyAssignment[name~=/^_/]` |
+| 禁止 `any` 关键字 | `any`（关键字别名） |
+
+### 校验与联动
+
+- 配置校验失败（selector 无法解析、缺字段、与内置规则重名、级别非法）时
+  `arktsup check` 直接报错退出（exit 2），**绝不静默忽略**。
+- 自定义规则在 `--watch` / `--staged` / 单文件 / 目录模式全链路生效；
+  `--fix` 不处理自定义规则（无自动修复引擎），但报告照常。
+- 增量缓存（D4）：`.arktsuprc` 的 `ignore/rules/customRules` 任一变化都会使
+  配置指纹失效，缓存自动重算，不会复用过期结果。
+
 ## 明确不做检查的项（重要）
 
 | 写法 | 为什么不做 |

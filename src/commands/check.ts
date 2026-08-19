@@ -13,12 +13,13 @@
 
 import * as path from 'node:path';
 import * as fs from 'node:fs';
-import { scanSource, applyAutoFixes, DEFAULT_SKIP, ScanReport, Severity, Finding } from '../lib/arkts-check';
+import { scanSource, applyAutoFixes, applyRuleConfig, isBuiltinRuleName, DEFAULT_SKIP, ScanReport, Severity, Finding, ScanOptions } from '../lib/arkts-check';
 import { loadConfig, isRuleIgnored } from '../lib/config';
+import { compileCustomRules } from '../lib/custom-rules';
 import { checkApiVersionInSource, detectMinApiVersion } from '../lib/api-check';
 import { renderHtmlReport, renderJsonReport, FixStats } from '../lib/report';
 import { analyzeSemantics } from '../lib/semantic';
-import { CheckCache, CACHE_FILE, buildFingerprints, countFindings, isCacheFresh, loadCache, saveCache } from '../lib/cache';
+import { CheckCache, CACHE_FILE, CACHE_VERSION, buildFingerprints, countFindings, isCacheFresh, loadCache, saveCache } from '../lib/cache';
 
 const SEV_COLOR: Record<string, string> = {
   error: '\x1b[31m',   // red
@@ -102,6 +103,30 @@ export function runCheck(argv: string[]): number {
   const config = loadConfig(isFile ? path.dirname(abs) : abs);
   const skip = new Set([...DEFAULT_SKIP, ...extraSkip, ...(config.ignore?.dirs ?? [])]);
 
+  // ---- D6 规则自定义：内置规则级别覆盖 + 声明式自定义规则（.arktsuprc） ----
+  const ruleOverrides: Record<string, Severity | 'off'> = {};
+  if (config.rules) {
+    for (const [name, v] of Object.entries(config.rules)) {
+      if (v === 'off' || v === 'error' || v === 'warning' || v === 'info') {
+        ruleOverrides[name] = v;
+      } else {
+        console.error(`警告: rules.${name} 级别 ${JSON.stringify(v)} 非法（off|error|warning|info），已忽略`);
+      }
+      if (!isBuiltinRuleName(name) && !(config.customRules ?? []).some((c) => c.name === name)) {
+        console.error(`警告: rules.${name} 不是已知规则名（内置或 customRules 中定义），覆盖不会生效`);
+      }
+    }
+  }
+  const { rules: customRules, errors: customErrors } = compileCustomRules(config.customRules);
+  if (customErrors.length > 0) {
+    for (const e of customErrors) console.error('错误: ' + e);
+    console.error('错误: .arktsuprc 自定义规则配置无效，已中止检查（修正后重试）');
+    return 2;
+  }
+  const scanOpts: ScanOptions = { ruleOverrides, customRules };
+  // 配置指纹：rules/customRules/ignore 任一变化 -> 增量缓存（D4）自动失效
+  const configHash = JSON.stringify({ ignore: config.ignore, rules: config.rules, customRules: config.customRules });
+
   /** 构造一次检查运行（含 --fix 写入），返回处理器与修复统计 */
   const makeProcessor = (): {
     processFileContent: (f: string, t: string) => Finding[];
@@ -128,7 +153,7 @@ export function runCheck(argv: string[]): number {
           src = res.text;
         }
       }
-      return scanSource(file, src, minSeverity);
+      return scanSource(file, src, minSeverity, scanOpts);
     };
     return { processFileContent, getTotalFixed: () => totalFixed, getFixStats: () => fixStats };
   };
@@ -143,7 +168,7 @@ export function runCheck(argv: string[]): number {
         console.error(`跳过 ${f}: ${(e as Error).message}`);
       }
     }
-    return summarize(findings, files.length, config);
+    return summarize(findings, files.length, config, ruleOverrides);
   };
 
   // ---- --staged：只检查 git 暂存区的 .ets（pre-commit 场景） ----
@@ -185,7 +210,7 @@ export function runCheck(argv: string[]): number {
       console.error(`错误: 无法处理 ${abs}: ${(e as Error).message}`);
       return 2;
     }
-    report = summarize(findings, 1, config);
+    report = summarize(findings, 1, config, ruleOverrides);
     scannedFiles = [abs];
   } else {
     const { collectEtsFiles } = require('../lib/arkts-check') as typeof import('../lib/arkts-check');
@@ -194,7 +219,7 @@ export function runCheck(argv: string[]): number {
     // ---- 增量缓存（D4）：全部文件未变时复用上次完整结果（含语义），秒出 ----
     cacheFile = path.join(abs, CACHE_FILE);
     if (useCache && files.length > 0) {
-      const cached = loadCache(cacheFile, TOOL_VERSION);
+      const cached = loadCache(cacheFile, TOOL_VERSION, configHash);
       if (cached && isCacheFresh(cached, files)) {
         const cnt = countFindings(cached.findings);
         report = { findings: cached.findings, filesScanned: files.length, errors: cnt.errors, warnings: cnt.warnings, infos: cnt.infos };
@@ -213,7 +238,7 @@ export function runCheck(argv: string[]): number {
         report.findings.push(...checkApiVersionInSource(f, fs.readFileSync(f, 'utf8'), minV, minSeverity));
       } catch { /* 跳过无法读取的文件 */ }
     }
-    report = summarize(report.findings, report.filesScanned, config);
+    report = summarize(report.findings, report.filesScanned, config, ruleOverrides);
   }
 
   // ---- 语义分析增强（D3）：类型信息精确判定 propsByIndex/untypedObjectLiteral/utilityType ----
@@ -235,14 +260,15 @@ export function runCheck(argv: string[]): number {
       return true;
     });
     report.findings.push(...sem.propsByIndexErrors);
-    report = summarize(report.findings, report.filesScanned, config);
+    report = summarize(report.findings, report.filesScanned, config, ruleOverrides);
   }
 
   // ---- 保存增量缓存（D4）：保存语义后完整结果；--fix 改文件后 mtime 变化自动失效 ----
   if (useCache && cacheFile && !watch && !staged && !isFile) {
     const cacheData: CheckCache = {
-      version: 1,
+      version: CACHE_VERSION,
       toolVersion: TOOL_VERSION,
+      configHash,
       files: buildFingerprints(scannedFiles),
       findings: report.findings,
     };
@@ -273,9 +299,10 @@ export function runCheck(argv: string[]): number {
   return outputReport(report, proc.getTotalFixed(), format, isRuleIgnored);
 }
 
-/** 汇总 findings 为报告并应用 .arktsuprc 规则忽略 */
-function summarize(findings: Finding[], filesScanned: number, config: ReturnType<typeof loadConfig>): ScanReport {
-  const filtered = findings.filter((f) => !isRuleIgnored(config, f.rule));
+/** 汇总 findings 为报告并应用 .arktsuprc 规则忽略 + D6 级别覆盖 */
+function summarize(findings: Finding[], filesScanned: number, config: ReturnType<typeof loadConfig>, overrides?: Record<string, Severity | 'off'>): ScanReport {
+  const applied = applyRuleConfig(findings, overrides);
+  const filtered = applied.filter((f) => !isRuleIgnored(config, f.rule));
   return {
     findings: filtered,
     filesScanned,
@@ -392,6 +419,13 @@ const HELP = `arktsup check — 扫描 .ets 源码中的 ArkTS 不兼容写法
   --report <file>       生成 HTML（或 .json）迁移报告：扫描统计 + --fix 修复明细 + 问题表
   --no-semantic         关闭 TypeChecker 语义分析（大工程更快）
   --no-cache            关闭增量缓存（目录模式默认缓存到 .arktsup-cache.json）
+
+配置（.arktsuprc.json，D6 规则自定义）:
+  { "rules": { "propsByIndex": "error", "noFuncBind": "off" },
+    "customRules": [ { "name": "noDebugger", "message": "禁止 debugger",
+                       "selector": "DebuggerStatement" } ] }
+  规则级别覆盖 + AST 选择器 DSL，详见 docs/RULES.md「规则自定义」
+
   -h, --help            显示帮助
 
 已覆盖规则（全部对照官方文档，详见 docs/RULES.md）:

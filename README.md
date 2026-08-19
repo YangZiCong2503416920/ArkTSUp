@@ -128,6 +128,39 @@ arktsup check src/main/ets
 
 退出码：存在 error 时返回 1，只有 warning 返回 0。
 
+### 自定义规则与级别覆盖（D6，v0.9）
+
+在工程根目录放 `.arktsuprc.json` 即可声明式自定义规则、覆盖内置规则级别
+（竞品规则集均封闭，这是 ArkTSUp 的差异化能力，完整 DSL 见 [docs/RULES.md](docs/RULES.md)「规则自定义」）：
+
+```json
+{
+  "ignore": { "dirs": ["ohosTest"] },
+  "rules": { "propsByIndex": "off", "noFuncBind": "error" },
+  "customRules": [
+    {
+      "name": "noDebugger",
+      "message": "禁止 debugger 语句（调试残留）",
+      "severity": "error",
+      "selector": "DebuggerStatement",
+      "fix": "删除 debugger;"
+    },
+    {
+      "name": "noConsoleLog",
+      "message": "禁止 console.log（调试输出请用 hilog）",
+      "severity": "warning",
+      "selector": "PropertyAccessExpression[text~=/^console\\.(log|debug)$/]"
+    }
+  ]
+}
+```
+
+- `rules`：内置（及自定义）规则级别覆盖，取值 `off | error | warning | info`。
+- `customRules`：AST 选择器 DSL（eslint 子集）——类型名（`CallExpression` / `Identifier` …，
+  关键字可写小写别名）+ 属性（`name` / `text` / `kind`，`=` 相等 / `~=` 正则）+ `>` 祖先链。
+- 配置校验失败时 `check` 直接报错退出（exit 2），不静默忽略；
+  配置变更会自动使增量缓存（D4）失效，`--watch` / `--staged` 全链路生效。
+
 ### 已覆盖规则
 
 共 77 条规则，全部对照官方文档逐条核验（来源与证据见 [docs/RULES.md](docs/RULES.md)），
@@ -316,6 +349,10 @@ npm test        # 构建 + 单元测试（node:test）
 - [x] **资源文件管理**：`arktsup resource` — 缺失引用检查、未使用资源检测、R.ets 常量生成、条目添加
 - [x] **API 版本迁移助手**：`arktsup migrate` — @ohos.* → @kit.* 检测与自动修复
 - [x] **VS Code 插件**：打包产物就绪（自包含 CLI、图标/徽章/元数据齐全），见 [plugin/README.md](plugin/README.md)
+- [x] **规则自定义（D6，v0.9）**：`.arktsuprc` 内置规则级别覆盖 `rules` + 声明式自定义规则
+      `customRules`（AST 选择器 DSL：类型名 + name/text/kind 属性 + `>` 祖先链 + 正则），
+      配置校验失败即 exit 2、配置指纹接入增量缓存（D4）、`--watch`/`--staged` 全链路生效，
+      见 [docs/RULES.md](docs/RULES.md)「规则自定义」
 
 ### ⏳ 待做
 

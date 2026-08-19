@@ -49,14 +49,14 @@
 | D3 | **TypeChecker 语义分析**（propsByIndex 豁免/升级 / untypedObjectLiteral 防御性豁免 / utilityType 自定义类型；影子 .ts + createProgram，跨文件类型信息可用） | oxc-ark 明言保守启发式；这是技术壁垒 | ✅ v0.7 已完成（112 测试全绿，官方样本回归见 QUALITY-REPORT §3.8） |
 | D4 | **增量扫描/缓存**（大工程只扫变更文件，性能对标 oxc-ark 的 Rust 速度） | oxc-ark 快但无缓存语义；ArkTSUp 用缓存追平体验 | ✅ v0.8 已完成（.arktsup-cache.json，全文件未变秒出，命中/失效一致性验证） |
 | D5 | **--fix 全面化**（索引访问转点号 / catch 去类型标注） | 竞品修复能力为零 | ✅ v0.8 已完成（obj['k']→obj.k、catch (e:T)→catch (e)，114+ 测试） |
-| D6 | **规则自定义**（.arktsuprc 声明式自定义规则） | 竞品规则集均封闭 | v0.9 |
+| D6 | **规则自定义**（.arktsuprc 声明式自定义规则） | 竞品规则集均封闭 | ✅ v0.9 已完成（内置规则级别覆盖 rules + customRules AST 选择器 DSL；配置指纹接入 D4 缓存，--watch/--staged 全链路生效，见 docs/RULES.md「规则自定义」） |
 
 ## 5. 1.0.0 版本路线
 
-- **v0.6.0**：D1 API 版本兼容检查 + D2 工程迁移报告
-- **v0.7.0**：D3 TypeChecker 语义分析（三大局限修复）
-- **v0.8.0**：D4 增量缓存 + D5 --fix 全面化
-- **v0.9.0**：D6 规则自定义 + 生态完善
+- **v0.6.0**：D1 API 版本兼容检查 + D2 工程迁移报告 ✅
+- **v0.7.0**：D3 TypeChecker 语义分析（三大局限修复）✅
+- **v0.8.0**：D4 增量缓存 + D5 --fix 全面化 ✅
+- **v0.9.0**：D6 规则自定义 + 生态完善 ✅
 - **v1.0.0**：稳定性打磨、全量回归、官方文档、正式发布
 
 > 防"水 PR"门禁（延续）：每个功能必须有竞品依据（本报告）+ 单测 + 官方 samples 回归 + 真实工程验证，缺一不可。

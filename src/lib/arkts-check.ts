@@ -39,6 +39,46 @@ export interface CheckOptions {
   minSeverity?: Severity;
 }
 
+/**
+ * 扫描选项（D6 规则自定义）：级别覆盖 + 声明式自定义规则。
+ * 由 check 命令从 .arktsuprc 解析后传入；库调用方可直接构造。
+ */
+export interface ScanOptions {
+  /** 规则级别覆盖：规则名 -> off | error | warning | info（对内置与自定义规则均生效） */
+  ruleOverrides?: Record<string, Severity | 'off'>;
+  /** 自定义规则（由 src/lib/custom-rules.ts 的 compileCustomRules 编译） */
+  customRules?: readonly CustomRuleHook[];
+}
+
+/** 自定义规则在扫描器中的最小接口（CustomRuleHook 由 CompiledCustomRule 结构化满足） */
+export interface CustomRuleHook {
+  name: string;
+  message: string;
+  fix: string;
+  severity: Severity;
+  matches(node: ts.Node, sf: ts.SourceFile): boolean;
+}
+
+/** 某规则名是否为内置规则（供配置校验/未知规则名告警使用） */
+export function isBuiltinRuleName(name: string): boolean {
+  return Object.prototype.hasOwnProperty.call(RULE_INFO, name);
+}
+
+/**
+ * 对既有 findings 应用规则级别覆盖（D6）：'off' 丢弃，其余改写 severity。
+ * 用于 scanSource 之外的补充检查（语义升级 / API 版本检查）与库调用方。
+ */
+export function applyRuleConfig(findings: readonly Finding[], overrides?: Record<string, Severity | 'off'>): Finding[] {
+  if (!overrides) return [...findings];
+  const out: Finding[] = [];
+  for (const f of findings) {
+    const o = overrides[f.rule];
+    if (o === 'off') continue;
+    out.push(o ? { ...f, severity: o } : f);
+  }
+  return out;
+}
+
 export const DEFAULT_SKIP = new Set(['node_modules', 'oh_modules', '.hvigor', '.git', 'build', '.idea', 'dist', '.cxx', 'ohTest']);
 
 /** 收集一个目录下所有 .ets 文件（跳过构建产物目录） */
@@ -541,7 +581,7 @@ const REFLECT_BANNED = new Set([
   'getPrototypeOf', 'isExtensible', 'preventExtensions', 'setPrototypeOf',
 ]);
 
-export function scanSource(file: string, sourceText: string, minSeverity: Severity = 'warning'): Finding[] {
+export function scanSource(file: string, sourceText: string, minSeverity: Severity = 'warning', options: ScanOptions = {}): Finding[] {
   let sf: ts.SourceFile;
   try {
     sf = ts.createSourceFile(file, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
@@ -550,17 +590,23 @@ export function scanSource(file: string, sourceText: string, minSeverity: Severi
     return [];
   }
   const findings: Finding[] = [];
+  const overrides = options.ruleOverrides ?? {};
+  const customRules = options.customRules ?? [];
+  /** 规则的有效级别：'off' 表示不报告（D6 级别覆盖） */
+  const sevOf = (rule: string): Severity | 'off' => overrides[rule] ?? (RULE_INFO[rule]?.severity ?? 'warning');
   const add = (rule: string, node: ts.Node) => {
     const meta = RULE_INFO[rule];
     if (!meta) return;
-    if (minSeverity === 'error' && meta.severity !== 'error') return;
-    if (minSeverity === 'warning' && meta.severity === 'info') return;
+    const sev = sevOf(rule);
+    if (sev === 'off') return;
+    if (minSeverity === 'error' && sev !== 'error') return;
+    if (minSeverity === 'warning' && sev === 'info') return;
     const pos = sf.getLineAndCharacterOfPosition(node.getStart(sf));
     findings.push({
       file,
       line: pos.line + 1,
       column: pos.character + 1,
-      severity: meta.severity,
+      severity: sev,
       rule,
       message: meta.message,
       fix: meta.fix,
@@ -570,17 +616,38 @@ export function scanSource(file: string, sourceText: string, minSeverity: Severi
   const addAt = (rule: string, startPos: number, endPos: number) => {
     const meta = RULE_INFO[rule];
     if (!meta) return;
-    if (minSeverity === 'error' && meta.severity !== 'error') return;
+    const sev = sevOf(rule);
+    if (sev === 'off') return;
+    if (minSeverity === 'error' && sev !== 'error') return;
     const pos = sf.getLineAndCharacterOfPosition(startPos);
     findings.push({
       file,
       line: pos.line + 1,
       column: pos.character + 1,
-      severity: meta.severity,
+      severity: sev,
       rule,
       message: meta.message,
       fix: meta.fix,
       snippet: sourceText.slice(startPos, endPos).replace(/\s+/g, ' ').trim().slice(0, 120),
+    });
+  };
+  /** 自定义规则命中（D6）：按规则声明报告（无内置 meta；rules 覆盖同样生效） */
+  const addCustom = (cr: CustomRuleHook, node: ts.Node): void => {
+    const o = overrides[cr.name];
+    if (o === 'off') return;
+    const sev = o ?? cr.severity;
+    if (minSeverity === 'error' && sev !== 'error') return;
+    if (minSeverity === 'warning' && sev === 'info') return;
+    const pos = sf.getLineAndCharacterOfPosition(node.getStart(sf));
+    findings.push({
+      file,
+      line: pos.line + 1,
+      column: pos.character + 1,
+      severity: sev,
+      rule: cr.name,
+      message: cr.message,
+      fix: cr.fix,
+      snippet: snippetOf(sf, node),
     });
   };
 
@@ -795,6 +862,10 @@ export function scanSource(file: string, sourceText: string, minSeverity: Severi
   }
 
   function walk(node: ts.Node): void {
+    // 0. 自定义规则（D6）：AST 选择器匹配（命中即报告，无内置 meta）
+    for (const cr of customRules) {
+      if (cr.matches(node, sf)) addCustom(cr, node);
+    }
     // 1. any / unknown
     if (ts.isTypeNode(node) && isAnyOrUnknownTypeNode(node, sf)) {
       add('noAny', node);
@@ -1221,22 +1292,22 @@ export function scanSource(file: string, sourceText: string, minSeverity: Severi
   return findings;
 }
 
-export function scanFile(file: string, minSeverity: Severity = 'warning'): Finding[] {
+export function scanFile(file: string, minSeverity: Severity = 'warning', options: ScanOptions = {}): Finding[] {
   let text: string;
   try {
     text = fs.readFileSync(file, 'utf8');
   } catch {
     return [];
   }
-  return scanSource(file, text, minSeverity);
+  return scanSource(file, text, minSeverity, options);
 }
 
-export function scanDirectory(root: string, options: CheckOptions = {}): ScanReport {
+export function scanDirectory(root: string, options: CheckOptions = {}, scanOptions: ScanOptions = {}): ScanReport {
   const minSeverity = options.minSeverity ?? 'warning';
   const files = collectEtsFiles(root, options.skipDirs ? new Set(options.skipDirs) : undefined);
   const findings: Finding[] = [];
   for (const f of files) {
-    findings.push(...scanFile(f, minSeverity));
+    findings.push(...scanFile(f, minSeverity, scanOptions));
   }
   const errors = findings.filter((f) => f.severity === 'error').length;
   const warnings = findings.filter((f) => f.severity === 'warning').length;

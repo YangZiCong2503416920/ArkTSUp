@@ -1,0 +1,31 @@
+{
+  "ignore": {
+    "dirs": ["ohosTest"]
+  },
+  "rules": {
+    "propsByIndex": "off",
+    "noFuncBind": "error"
+  },
+  "customRules": [
+    {
+      "name": "noDebugger",
+      "message": "禁止 debugger 语句（调试残留）",
+      "severity": "error",
+      "selector": "DebuggerStatement",
+      "fix": "删除 debugger;"
+    },
+    {
+      "name": "noConsoleLog",
+      "message": "禁止 console.log / console.debug（调试输出请用 hilog）",
+      "severity": "warning",
+      "selector": "PropertyAccessExpression[text~=/^console\\.(log|debug)$/]",
+      "fix": "改用 hilog.info(...)"
+    },
+    {
+      "name": "noAlert",
+      "message": "禁止 alert(...) 调用",
+      "severity": "error",
+      "selector": "CallExpression > Identifier[name=alert]"
+    }
+  ]
+}

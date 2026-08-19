@@ -8,12 +8,17 @@
 import * as fs from 'node:fs';
 import { Finding } from './arkts-check';
 
-export const CACHE_VERSION = 1;
+export const CACHE_VERSION = 2;
 export const CACHE_FILE = '.arktsup-cache.json';
 
 export interface CheckCache {
   version: number;
   toolVersion: string;
+  /**
+   * 配置指纹（D6）：ignore / rules / customRules 序列化。
+   * 自定义规则或级别覆盖变更后旧缓存立即失效，避免复用过期结果。
+   */
+  configHash?: string;
   /** 文件路径 -> 指纹（mtime + size） */
   files: Record<string, { mtime: number; size: number }>;
   /** 完整检查结果（语法 + 语义后） */
@@ -29,11 +34,13 @@ export function fingerprintOf(p: string): { mtime: number; size: number } | null
   }
 }
 
-export function loadCache(cacheFile: string, toolVersion: string): CheckCache | null {
+export function loadCache(cacheFile: string, toolVersion: string, configHash?: string): CheckCache | null {
   try {
     const j = JSON.parse(fs.readFileSync(cacheFile, 'utf8')) as CheckCache;
     if (j.version !== CACHE_VERSION || j.toolVersion !== toolVersion) return null;
     if (!j.files || !Array.isArray(j.findings)) return null;
+    // 配置指纹不匹配（或旧缓存无指纹）视为失效，保证自定义规则变更后结果正确
+    if (configHash !== undefined && j.configHash !== configHash) return null;
     return j;
   } catch {
     return null;

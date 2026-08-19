@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { CheckCache, buildFingerprints, countFindings, fingerprintOf, isCacheFresh, loadCache, saveCache } from '../src/lib/cache';
+import { CheckCache, CACHE_VERSION, buildFingerprints, countFindings, fingerprintOf, isCacheFresh, loadCache, saveCache } from '../src/lib/cache';
 
 test('D4 cache: 保存/加载/指纹命中与失效', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'arktsup-cache-'));
@@ -14,15 +14,17 @@ test('D4 cache: 保存/加载/指纹命中与失效', () => {
   const files = [f1, f2];
   const cacheFile = path.join(dir, '.arktsup-cache.json');
   const finding = { file: f1, line: 1, column: 8, severity: 'error' as const, rule: 'noAny', message: 'x', fix: 'y', snippet: 'any' };
-  const cache: CheckCache = { version: 1, toolVersion: '0.5.0', files: buildFingerprints(files), findings: [finding] };
+  const cache: CheckCache = { version: CACHE_VERSION, toolVersion: '0.5.0', configHash: 'hashA', files: buildFingerprints(files), findings: [finding] };
   saveCache(cacheFile, cache);
   assert.ok(fs.existsSync(cacheFile));
-  // 命中
-  const loaded = loadCache(cacheFile, '0.5.0');
+  // 命中（toolVersion 与 configHash 均一致）
+  const loaded = loadCache(cacheFile, '0.5.0', 'hashA');
   assert.ok(loaded);
   assert.ok(isCacheFresh(loaded!, files));
   // 版本不匹配失效
-  assert.equal(loadCache(cacheFile, '9.9.9'), null);
+  assert.equal(loadCache(cacheFile, '9.9.9', 'hashA'), null);
+  // D6：配置指纹不匹配失效（自定义规则/级别覆盖变更）
+  assert.equal(loadCache(cacheFile, '0.5.0', 'hashB'), null);
   // 文件变更失效
   fs.writeFileSync(f1, 'let a: number = 1;');
   assert.equal(isCacheFresh(loaded!, files), false);
@@ -32,7 +34,7 @@ test('D4 cache: 保存/加载/指纹命中与失效', () => {
   assert.equal(isCacheFresh(loaded!, [f1, f2, f3]), false);
   // 损坏缓存
   fs.writeFileSync(cacheFile, '{bad json');
-  assert.equal(loadCache(cacheFile, '0.5.0'), null);
+  assert.equal(loadCache(cacheFile, '0.5.0', 'hashA'), null);
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
