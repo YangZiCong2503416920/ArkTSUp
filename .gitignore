@@ -3,3 +3,8 @@ dist/
 *.log
 .DS_Store
 .arktsup-cache.json
+
+# local scratch / packaging artifacts
+.review-tmp/
+*.tgz
+.arts/

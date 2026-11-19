@@ -3,7 +3,9 @@
 > A CLI toolkit for HarmonyOS ArkTS developers: JSON → ArkTS type generation, and strict-syntax checking against official ArkTS rules.
 
 [![CI](https://github.com/YangZiCong2503416920/ArkTSUp/actions/workflows/ci.yml/badge.svg)](https://github.com/YangZiCong2503416920/ArkTSUp/actions)
-[![npm](https://img.shields.io/npm/v/arktsup)](https://www.npmjs.com/package/arktsup) <!-- 创建仓库后把 YangZiCong2503416920 换成你的 GitHub 用户名 -->
+[![npm](https://img.shields.io/npm/v/arktsup)](https://www.npmjs.com/package/arktsup)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](package.json)
 
 面向鸿蒙（HarmonyOS）ArkTS 开发者的痛点解决方案集合。全部工具为本地 CLI，不依赖 DevEco Studio，可直接对工程文件做转换、扫描、修复。生成/修复的结果严格贴合 ArkTS 语法限制（无 any、无任意联合、对象字面量必须显式声明类型等）。
 
@@ -21,8 +23,11 @@
 
 | 命令 | 作用 | 解决的痛点 |
 | --- | --- | --- |
-| arktsup json2ts | JSON → 符合 ArkTS 限制的类型声明（interface/class） | 后端接口 JSON 手写类型很痛苦；生成的类型天然避开 ArkTS 不支持的写法 |
-| arktsup check | 扫描 .ets 中的 ArkTS 不兼容写法并给出修复建议（可 --fix 自动修 any） | 迁移/新人代码里到处是 any、无类型对象字面量、解构等编译报错 |
+| `arktsup check` | 按 **77 条**官方规则扫描 `.ets` 的 ArkTS 不兼容写法；支持 `--fix` / `--report`（HTML·JSON）/ `--watch` / `--api-version`（527 模块版本表）/ 增量缓存 | 迁移与新人代码里的 `any`、解构、无类型对象字面量等编译报错；升级 NEXT 时不知道哪个 API 会挂 |
+| `arktsup json2ts` | JSON → 符合 ArkTS 限制的类型声明（interface/class） | 后端接口 JSON 手写类型很痛苦；生成的类型天然避开 ArkTS 不支持的写法 |
+| `arktsup template` | 生成 page / component / model / state / dialog 样板 | 每新建一个页面都要抄一遍结构 |
+| `arktsup resource` | 校验 `$r()` 引用、检出未使用资源、生成 `R.ets` 常量 | 资源名写错只能等编译期才暴露 |
+| `arktsup migrate` | `@ohos.*` → `@kit.*` 批量迁移 | 旧工程升级 HarmonyOS NEXT 时的 import 地狱 |
 
 ## 安装
 

@@ -1,0 +1,217 @@
+
+> arktsup@0.9.0 test
+> npm run build && node --test dist/test/*.test.js
+
+
+> arktsup@0.9.0 build
+> tsc -p tsconfig.json
+
+✔ apiVersion: import 的 @ohos 模块版本高于最低版本时 error (8.0108ms)
+✔ apiVersion: 未收录模块 / 非 @ohos 模块不报（保守） (0.5241ms)
+✔ apiVersion: 畸形输入不崩溃 (4.2476ms)
+✔ detectMinApiVersion: 从 module.json5 / app.json5 探测 (53.6058ms)
+✔ noAny: any/unknown 各形态（含去重） (11.7218ms)
+✔ untypedObjectLiteral: 无类型/带 Object 注解报错，带具体类型不报 (4.5537ms)
+✔ nonInferrableArray: 对象字面量数组/空数组报错，带类型不报 (3.6557ms)
+✔ 解构：对象/数组声明与赋值 (5.3725ms)
+✔ objectSpread（数组展开不报） (1.3478ms)
+✔ 官方示例模式不误报：done: Function / 元组 / 回调返回字面量 / 字符串键 (5.3115ms)
+✔ symbolType: 类型与 Symbol() 调用，Symbol.iterator 不报 (1.0129ms)
+✔ staticObjectLiteral / indexSignature（错误级）/ propsByIndex (5.8234ms)
+✔ catchWithType: 带类型报错，省略不报 (1.1831ms)
+✔ forIn / tsSuppress / asConst / utilityType (3.3543ms)
+✔ intersection / conditionalType / objLiteralAsType (4.4373ms)
+✔ nonIdentifierProps: 数字键报错，字符串键合法 (0.6576ms)
+✔ deleteOp / typeQuery / angleCast / inOperator / varDecl / privateIdentifiers (3.4461ms)
+✔ stdlibRestricted: Object.freeze / hasOwnProperty / eval (0.6316ms)
+✔ minSeverity 过滤（当前规则全是 error，warning 级别下不丢） (0.3585ms)
+✔ 行号列号正确 (0.3393ms)
+✔ fixAnyInSource: any/unknown -> Object (0.4895ms)
+✔ applyAutoFixes: any/unknown->Object 且 var->let (0.9042ms)
+✔ applyAutoFixes: angleCast <T>expr -> expr as T (0.9664ms)
+✔ noFuncExpressions / noGenerators (0.9596ms)
+✔ noFuncApplyCall / noFuncBind (0.4426ms)
+✔ noDestructParams / noTypingWithThis (1.1484ms)
+✔ noStandaloneThis (2.0348ms)
+✔ noPrototypeAssignment / noMethodReassignment (1.4106ms)
+✔ noNewTarget / noMultipleStaticBlocks / noDefiniteAssignment (1.9869ms)
+✔ noGlobalThis / noMappedTypes / noNestedFuncs (1.8377ms)
+✔ noEnumMixedTypes / noCommaOutsideLoops / noCtorPropDecls (2.7779ms)
+✔ noClassLiterals / noImportAssertions / noCallSignatures / noCtorSignatures (3.4246ms)
+✔ noRequire / noExportAssignment / noUmd (1.9876ms)
+✔ noNsStatements / noGenericLambdas / noIs / noAliasesByIndex (2.6797ms)
+✔ noImportDefaultAs / noAmbientDecls / noModuleWildcards / noLimitedThrow (1.7654ms)
+✔ noMisplacedImports: import 必须在其他语句之前 (0.9143ms)
+✔ noDeclMerging / noEnumMerging / uniqueNames (3.0518ms)
+✔ noLimitedESObject (0.6131ms)
+✔ noJsx: JSX 表达式（recipe54） (2.2125ms)
+✔ noWith: with 语句（recipe84） (0.6126ms)
+✔ noInferredGenericParams: 泛型函数无参调用（recipe34） (1.9277ms)
+✔ noPolymorphicUnops: 一元 + - ~ 作用于字符串字面量（recipe55） (0.8821ms)
+✔ noClassesAsObj: 类被当作对象值（recipe149） (0.6952ms)
+✔ extendsOnlyClass: interface extends class（recipe104） (1.069ms)
+✔ implementsOnlyIface: implements 指定 class（recipe51） (0.7571ms)
+✔ noNsAsObj: namespace 被当作对象值（recipe114） (0.5776ms)
+✔ noFuncProps: 函数上声明属性（recipe139） (0.4641ms)
+✔ instanceofRefTypes: instanceof 左操作数是类型（recipe65） (0.3258ms)
+✔ noImplicitReturnTypes: return 调用返回类型省略的函数（recipe90） (1.245ms)
+✔ noExtendSameProp: interface 继承多个同名方法接口（recipe102） (1.3448ms)
+✔ applyAutoFixes: 解构拆分（对象/数组/重命名/hole，保守子集） (1.7419ms)
+✔ applyAutoFixes: 解构后 check 不再报 objectDestructuring (1.0505ms)
+✔ applyAutoFixes: 索引访问转点号（D5） (0.9599ms)
+✔ applyAutoFixes: catch 去类型标注（D5） (0.3102ms)
+✔ D4 cache: 保存/加载/指纹命中与失效 (16.8376ms)
+✔ D4 cache: countFindings 统计 (1.6825ms)
+✔ D4 cache: fingerprintOf 缺失文件返回 null (0.4989ms)
+✔ loadConfig: 读取 .arktsuprc.json 的忽略项 (10.289ms)
+✔ check 命令: .arktsuprc 忽略规则与目录生效 (1540.9944ms)
+✔ compileSelector: 关键字小写别名（true -> TrueKeyword）与大小写类型名 (2.1362ms)
+✔ compileSelector: 未知类型名 / 语法错误 / 非法正则 / 未知属性均报错 (0.5733ms)
+✔ compileSelector: 祖先链匹配（CallExpression > Identifier[name=alert]） (6.9642ms)
+✔ compileSelector: text 正则（PropertyAccessExpression[text~=console...]） (1.4591ms)
+✔ compileSelector: name 属性（含属性赋值字符串键与下划线开头） (2.7442ms)
+✔ compileCustomRule / compileCustomRules: 字段校验与批量错误收集 (0.3679ms)
+✔ scanSource: 自定义规则命中（错误级，行列正确，不干扰内置规则） (3.5892ms)
+✔ scanSource: 自定义规则默认级别 error；warning 被 minSeverity=error 过滤 (1.2447ms)
+✔ scanSource: rules 覆盖对自定义规则生效（off 隐藏 / info 被默认级别过滤） (0.3296ms)
+✔ scanSource: 内置规则级别覆盖（noFuncBind 升级 error 后 minSeverity=error 可见；noAny off 隐藏） (1.6538ms)
+✔ applyRuleConfig: 丢弃 off / 改写 severity / 未覆盖保持原样 (0.686ms)
+✔ 默认行为不变：无配置时 scanSource 结果与空选项一致（官方样本回归防线） (1.4987ms)
+✔ isBuiltinRuleName: 内置与自定义规则名区分 (0.0974ms)
+✔ loadConfig: 读取 rules 与 customRules，目标目录优先于 cwd 合并 (10.2135ms)
+✔ validateConfig: 非法级别 / 缺字段 / 重名 / 与内置规则冲突 (0.3858ms)
+✔ CLI: customRules 端到端（no-debugger 报错、行列正确、exit 1） (1452.2131ms)
+✔ CLI: rules 级别覆盖（noAny off + noFuncBind 升级 error -> exit 1） (1264.5632ms)
+✔ CLI: 非法自定义规则配置 -> exit 2（不静默忽略） (284.1957ms)
+✔ D6: 配置指纹 —— 自定义规则变更后增量缓存自动失效 (2484.28ms)
+✔ nodeNameOf: 标识符/属性名/字符串键 (0.558ms)
+✔ fuzz: 400 组随机代码片段不崩溃且输出合法 (205.0279ms)
+✔ fuzz: 真实代码随机变异 200 次不崩溃 (453.2982ms)
+✔ fuzz: 空输入/极短输入边界 (1.1807ms)
+提示: 输入包含 JSON5 语法（注释/尾逗号/单引号等），已按 JSON5 解析
+✔ 基本对象生成 interface (3.5936ms)
+✔ 嵌套对象生成子类型 (1.5718ms)
+✔ 数组映射为 T[] (0.3227ms)
+✔ 空数组 -> Object[] + 警告 (0.2491ms)
+✔ 对象数组合并键，缺失键变为可选 (0.2514ms)
+✔ null 字段标记可空 (0.3613ms)
+✔ 混合类型生成联合（ArkTS 支持任意联合） (0.243ms)
+✔ class 风格 (0.1776ms)
+✔ --sort 按字母序 (9.0604ms)
+✔ --optional 全部可选 (0.4778ms)
+✔ 共享对象引用去重（同一类型名） (0.484ms)
+✔ 数组中含 null 元素生成 (T | null)[] (0.5874ms)
+✔ 递归结构不爆栈且生成递归引用 (0.2378ms)
+✔ 非常规键名转换为合法标识符并警告 (0.2607ms)
+✔ 根为对象数组 (0.2886ms)
+✔ 根为原始值 (0.3136ms)
+✔ CLI: json2ts 接受 JSON5（注释/尾逗号/单引号） (443.0333ms)
+✔ scanMigrateFile: 检测 @ohos.* 废弃导入 (10.3238ms)
+✔ fixMigrateFile: 默认导入 hilog 改为具名 kit 导入 (2.0645ms)
+✔ fixMigrateFile: fs -> fileIo 改名并替换引用 (2.1208ms)
+✔ fixMigrateFile: prompt -> promptAction 典型迁移 (0.6599ms)
+✔ fixMigrateFile: 具名导入且名字不变时保持 (0.5675ms)
+✔ fixMigrateFile: 无废弃导入时不动 (0.423ms)
+✔ fixMigrateFile: 导入名冲突时跳过并提示，不生成坏代码 (0.7701ms)
+✔ fixMigrateFile: 命名空间导入 * as fs (0.6866ms)
+✔ renderHtmlReport: 结构完整且统计正确 (1.3073ms)
+✔ renderHtmlReport: XSS 转义 (0.3318ms)
+✔ renderHtmlReport: 无问题时显示通过 (0.1674ms)
+✔ renderJsonReport: 含 meta/summary/findings (4.4391ms)
+✔ checkResources: 缺失引用为 error，未使用资源为 warning (47.3306ms)
+✔ generateConstants: 生成 R.ets 且不含未引用的错误 (45.2803ms)
+✔ addResource: 添加条目到 base element json (24.7043ms)
+✔ collectResourceDefs: 读取 element json 与 media 文件 (13.9035ms)
+✔ CLI: resource check 传文件路径时干净报错（exit 2），不抛栈 (10.381ms)
+✔ CLI: resource add 非法键名/非法类型报错（exit 2），合法键成功 (9.8594ms)
+✔ collectReferences: 注释/字符串内的 $r() 不产生引用 (15.9114ms)
+✔ resource check --min-severity error 时汇总与输出一致 (15.6446ms)
+✔ module.json5 中的 $media/$string 引用算作使用，不误报 unused (23.7248ms)
+✔ i18n: 检查 locale 键覆盖（base 缺失=error，未翻译=warning） (33.2111ms)
+✖ D3 propsByIndex: Record/数组豁免，接口升级 error (1083.8538ms)
+✖ D3 propsByIndex: 跨文件 import 的 interface 类型也能判定（影子方案） (837.889ms)
+✔ D3 propsByIndex: any/未标注类型保守不处理 (724.1489ms)
+✔ D3 untypedObjectLiteral: 无上下文字面量不误豁免 (643.5526ms)
+✖ D3 utilityType: 用户自定义 Omit 豁免，内置 Pick 仍报 (633.7989ms)
+✔ D3 analyzeSemantics: 空文件/畸形输入/空列表不崩溃 (652.1972ms)
+✔ page 模板包含 @Entry/@Component/struct 名且无 any (14.7271ms)
+✔ component 模板包含 @Prop/@State 与导出 struct (0.3597ms)
+✔ model 模板 interface/class 风格与字段 (0.9973ms)
+✔ model 无字段时报错 (0.3556ms)
+✔ state 模板生成 @Observed 类且字段有初值 (0.1616ms)
+✔ route-list 扫描 @Entry 页面生成常量表 (7.4618ms)
+✔ parseFields 缺类型时默认 string (0.1883ms)
+✔ route-list 重复 struct 名去重并警告 (0.2424ms)
+✔ 非法类型名/字段名报错 (0.1827ms)
+✔ dialog 模板生成 @CustomDialog 且字段类型合规 (4.0594ms)
+ℹ tests 137
+ℹ suites 0
+ℹ pass 134
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5908.9809
+
+✖ failing tests:
+
+test at dist\test\semantic.test.js:57:22
+✖ D3 propsByIndex: Record/数组豁免，接口升级 error (1083.8538ms)
+  AssertionError [ERR_ASSERTION]: Record/数组 2 处豁免
+  
+  0 !== 2
+  
+      at TestContext.<anonymous> (D:\projects\ArkTSUp\dist\test\semantic.test.js:74:22)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.start (node:internal/test_runner/test:1003:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:358:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist\test\semantic.test.js:80:22
+✖ D3 propsByIndex: 跨文件 import 的 interface 类型也能判定（影子方案） (837.889ms)
+  AssertionError [ERR_ASSERTION]: 跨文件 interface 类型索引访问升级
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (D:\projects\ArkTSUp\dist\test\semantic.test.js:89:22)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at dist\test\semantic.test.js:116:22
+✖ D3 utilityType: 用户自定义 Omit 豁免，内置 Pick 仍报 (633.7989ms)
+  AssertionError [ERR_ASSERTION]: 用户自定义 Omit 豁免
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (D:\projects\ArkTSUp\dist\test\semantic.test.js:131:22)
+      at Test.runInAsyncScope (node:async_hooks:214:14)
+      at Test.run (node:internal/test_runner/test:1106:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:788:18)
+      at Test.postRun (node:internal/test_runner/test:1235:19)
+      at Test.run (node:internal/test_runner/test:1163:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:788:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
