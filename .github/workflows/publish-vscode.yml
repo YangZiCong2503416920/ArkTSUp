@@ -13,6 +13,10 @@ name: Publish VS Code Extension (Marketplace)
 #      生成 PAT（Marketplace: Manage 权限）: https://marketplace.visualstudio.com/manage/publishers/yanceecha/pat
 #
 # 版本号取 plugin/package.json；--skip-duplicate 保证已发布的版本自动跳过，CI 保持绿。
+#
+# 注意: GitHub Actions 不允许在 step 的 `if` 里直接引用 secrets 上下文（会让整个
+# workflow 文件校验失败，并对每次 push 报一个空 job 的 failure）。
+# 因此凭据统一提升到 job 级 env，再用一个 step 输出 mode，供后续 if 判断。
 
 on:
   push:
@@ -24,6 +28,11 @@ jobs:
     permissions:
       contents: read
       id-token: write   # azure/login (OIDC) 需要
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -44,30 +53,40 @@ jobs:
           npm ci
           npm run package
 
-      # 3a) 方案 A：Entra ID 身份登录（OIDC）
+      # 3) 判定用哪套凭据（entra / pat / none）
+      - name: Detect credentials
+        id: creds
+        run: |
+          if [ -n "$AZURE_CLIENT_ID" ]; then
+            echo "mode=entra" >> "$GITHUB_OUTPUT"
+          elif [ -n "$VSCE_PAT" ]; then
+            echo "mode=pat" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=none" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 4a) 方案 A：Entra ID 身份登录（OIDC）
       - name: Azure login (Entra ID)
-        if: ${{ secrets.AZURE_CLIENT_ID != '' }}
+        if: steps.creds.outputs.mode == 'entra'
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
-      # 3b) 方案 A：vsce 使用 Entra ID 凭据发布
+      # 4b) 方案 A：vsce 使用 Entra ID 凭据发布
       - name: Publish via Entra ID (--azure-credential)
-        if: ${{ secrets.AZURE_CLIENT_ID != '' }}
+        if: steps.creds.outputs.mode == 'entra'
         working-directory: plugin
         run: npx --yes @vscode/vsce publish --packagePath arktsup-vscode.vsix --azure-credential --skip-duplicate
 
-      # 3c) 方案 B：PAT 发布
+      # 4c) 方案 B：PAT 发布
       - name: Publish via PAT
-        if: ${{ secrets.AZURE_CLIENT_ID == '' && secrets.VSCE_PAT != '' }}
+        if: steps.creds.outputs.mode == 'pat'
         working-directory: plugin
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: npx --yes @vscode/vsce publish --packagePath arktsup-vscode.vsix --skip-duplicate
 
-      # 3d) 未配置任何凭据：跳过发布并提示（保持 CI 绿）
+      # 4d) 未配置任何凭据：跳过发布并提示（保持 CI 绿）
       - name: Skip publish (no credentials configured)
-        if: ${{ secrets.AZURE_CLIENT_ID == '' && secrets.VSCE_PAT == '' }}
+        if: steps.creds.outputs.mode == 'none'
         run: echo "::warning::未配置发布凭据（AZURE_CLIENT_ID 或 VSCE_PAT），跳过发布。请按 docs/RELEASE.md §2.4 配置，或改用网页上传（§2.3）。"
