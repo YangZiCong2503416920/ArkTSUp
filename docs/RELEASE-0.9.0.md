@@ -28,7 +28,7 @@ arktsup check src/main/ets --fix        # 自动修复可修的项
 arktsup check src/main/ets --report out/report.html
 ```
 
-> **关于 npm**：registry 上的 `arktsup` 目前仍停在 `0.1.7`，本 tag 的源码与能力已在 GitHub 上。下一版会同步发布到 npm。
+> **npm 已同步**：`arktsup@0.9.0` 已通过 Trusted Publishing（GitHub OIDC，带 provenance）发布到 npm registry，`latest` 指向本版本。`npm install -g arktsup` 拿到的就是这一版。
 
 ## 升级提示
 
